@@ -1,0 +1,2243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestion Immobilière</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+<style>
+:root {
+  --bg:#f4f5f7; --surface:#fff; --surface2:#f0f1f4; --border:#dde0e8;
+  --green:#00a96e; --red:#e8294a; --blue:#5046e4; --gold:#d97706;
+  --text:#1a1830; --muted:#6b6e82; --dim:#b0b4c8;
+  --vitry:#5046e4; --fer:#00a96e; --gen:#d97706;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;min-height:100vh}
+
+/* LOCK */
+#lock-screen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center}
+.lock-card{background:#fff;border:1px solid var(--border);border-radius:20px;padding:48px 44px 40px;width:380px;box-shadow:0 8px 40px rgba(0,0,0,.10);text-align:center}
+.lock-card h2{font-family:'DM Serif Display',serif;font-size:22px;margin-bottom:6px}
+.lock-card p{font-size:13px;color:var(--muted);margin-bottom:28px}
+.lock-input{width:100%;padding:12px 16px;border:1.5px solid var(--border);border-radius:10px;font-family:'Outfit',sans-serif;font-size:15px;background:var(--bg);outline:none;text-align:center;letter-spacing:3px;transition:all .2s;margin-bottom:16px}
+.lock-input:focus{border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px rgba(80,70,228,.1)}
+.lock-input.shake{animation:shake .4s ease;border-color:var(--red)}
+.lock-btn{width:100%;padding:13px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer}
+.lock-btn:hover{background:#3d35c0}
+.lock-err{font-size:12px;color:var(--red);margin-top:10px;min-height:18px}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+
+/* HEADER */
+.header{padding:32px 40px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-end;background:linear-gradient(180deg,#eceef5 0%,transparent 100%);position:relative}
+.header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--vitry),var(--fer),var(--gen))}
+.header h1{font-family:'DM Serif Display',serif;font-size:28px}
+.header h1 span{color:var(--gold);font-style:italic}
+.header p{color:var(--muted);font-size:12px;margin-top:4px}
+.year-pill{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);border:1px solid var(--border);padding:5px 14px;border-radius:20px;background:#fff}
+
+/* NAV */
+.nav{display:flex;gap:4px;padding:12px 40px;border-bottom:1px solid var(--border);background:#fff;overflow-x:auto}
+.nav-btn{padding:8px 18px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;transition:all .15s;display:flex;align-items:center;gap:8px;white-space:nowrap;user-select:none}
+.nav-btn:hover{background:var(--surface2);color:var(--text)}
+.nav-btn.active{background:var(--surface2);color:var(--text);border-color:var(--border)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;gap:8px;padding:8px 40px;background:#fff;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted)}
+.tbtn{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'Outfit',sans-serif;font-size:12px;cursor:pointer;transition:all .15s}
+.tbtn:hover{color:var(--text);border-color:var(--dim)}
+.tbtn.danger:hover{color:var(--red);border-color:var(--red)}
+.tsep{width:1px;height:16px;background:var(--border);margin:0 4px}
+
+/* MAIN */
+.main{padding:28px 40px;max-width:1400px}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* BANNER */
+.banner{border-radius:10px;padding:16px 22px;margin-bottom:22px;display:flex;align-items:center;gap:12px;font-size:13px;font-weight:500;border:1px solid;position:relative;overflow:hidden}
+.banner::before{content:'';position:absolute;top:0;left:0;bottom:0;width:4px}
+.banner.neutral{background:rgba(80,70,228,.06);border-color:rgba(80,70,228,.2);color:var(--blue)}.banner.neutral::before{background:var(--blue)}
+.banner.positive{background:rgba(0,169,110,.06);border-color:rgba(0,169,110,.2);color:var(--green)}.banner.positive::before{background:var(--green)}
+.banner.negative{background:rgba(232,41,74,.06);border-color:rgba(232,41,74,.2);color:var(--red)}.banner.negative::before{background:var(--red)}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:22px}
+.kpi{background:#fff;border:1px solid var(--border);border-radius:10px;padding:18px 20px;position:relative;overflow:hidden}
+.kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:8px}
+.kpi-val{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;letter-spacing:-1px}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.kpi.green .kpi-val{color:var(--green)}.kpi.red .kpi-val{color:var(--red)}.kpi.blue .kpi-val{color:var(--blue)}.kpi.gold .kpi-val{color:var(--gold)}
+.kpi-accent{position:absolute;top:0;right:0;width:50px;height:50px;border-radius:0 10px 0 50px;opacity:.1}
+.kpi.green .kpi-accent{background:var(--green)}.kpi.red .kpi-accent{background:var(--red)}.kpi.blue .kpi-accent{background:var(--blue)}.kpi.gold .kpi-accent{background:var(--gold)}
+
+/* SECTION */
+.section{background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:18px}
+.sec-head{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:var(--surface2)}
+.sec-head h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;gap:8px}
+.sec-total{font-family:'DM Mono',monospace;font-size:15px;font-weight:600}
+.sec-total.red{color:var(--red)}.sec-total.green{color:var(--green)}
+.badge{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:700}
+.badge-red{background:rgba(232,41,74,.12);color:var(--red)}
+.badge-green{background:rgba(0,169,110,.12);color:var(--green)}
+.badge-blue{background:rgba(80,70,228,.12);color:var(--blue)}
+
+/* TABLE */
+.dt{width:100%;border-collapse:collapse}
+.dt thead th{padding:9px 16px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);border-bottom:1px solid var(--border);background:var(--surface2)}
+.dt tbody td{padding:11px 16px;border-bottom:1px solid rgba(221,224,232,.5);font-size:13px}
+.dt tbody tr:last-child td{border-bottom:none}
+.dt tbody tr:hover{background:rgba(0,0,0,.015)}
+.dt input,.dt select{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;padding:4px 8px;border-radius:6px;width:100%;outline:none;transition:all .2s}
+.dt input:focus,.dt select:focus{background:#fff;border-color:var(--blue);box-shadow:0 0 0 2px rgba(80,70,228,.1)}
+.dt select option{background:#fff}
+.mono{font-family:'DM Mono',monospace;text-align:right}
+.mono-red{font-family:'DM Mono',monospace;text-align:right;color:var(--red);font-weight:600}
+.mono-green{font-family:'DM Mono',monospace;text-align:right;color:var(--green);font-weight:600}
+.mono-blue{font-family:'DM Mono',monospace;text-align:right;color:var(--blue)}
+
+/* BUTTONS */
+.btn-add{margin:10px 16px;padding:7px 14px;background:transparent;border:1px dashed var(--border);color:var(--muted);border-radius:7px;cursor:pointer;font-family:'Outfit',sans-serif;font-size:12px;transition:all .15s;display:flex;align-items:center;gap:5px}
+.btn-add:hover{border-color:var(--dim);color:var(--text);background:rgba(0,0,0,.02)}
+.btn-del{background:none;border:none;color:var(--dim);cursor:pointer;padding:3px 6px;border-radius:4px;font-size:13px}
+.btn-del:hover{color:var(--red);background:rgba(232,41,74,.08)}
+
+/* TWO COL */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+@media(max-width:800px){.two-col{grid-template-columns:1fr}}
+
+/* CHARTS */
+.chart-box{padding:20px;height:240px;display:flex;align-items:center;justify-content:center}
+
+/* SYNTHESE MATRIX */
+.syn-matrix{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:22px}
+.sm{background:#fff;padding:16px 18px}
+.sm.hrow{background:var(--surface2);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
+.sm.vc{border-top:2px solid var(--vitry)}.sm.fc{border-top:2px solid var(--fer)}.sm.gc{border-top:2px solid var(--gen)}
+.sm .sv{font-family:'DM Mono',monospace;font-size:17px;font-weight:500}
+.sm .sv.red{color:var(--red)}.sm .sv.green{color:var(--green)}.sm .sv.blue{color:var(--blue)}
+
+/* CAT BARS */
+.cat-bar{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(221,224,232,.4)}
+.cat-bar:last-child{border-bottom:none}
+.cb-lbl{width:180px;font-size:12px;color:var(--muted);flex-shrink:0}
+.cb-track{flex:1;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.cb-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.cb-amt{width:90px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);flex-shrink:0}
+
+/* EMPTY */
+.empty{text-align:center;padding:40px 20px;color:var(--dim)}
+.empty-icon{font-size:36px;margin-bottom:10px}
+
+/* MODE BADGE */
+.mode-bar{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.mode-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700}
+.mb-long{background:rgba(80,70,228,.1);color:var(--vitry);border:1px solid rgba(80,70,228,.25)}
+.mb-air{background:rgba(232,41,74,.08);color:var(--red);border:1px solid rgba(232,41,74,.2)}
+.mb-compta{background:rgba(14,165,233,.1);color:#0ea5e9;border:1px solid rgba(14,165,233,.25)}
+
+/* IMPORT ZONE */
+.import-zone{border:2px dashed var(--border);border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s;background:#fafbfc;margin-bottom:18px}
+.import-zone:hover,.import-zone.drag-over{border-color:var(--blue);background:rgba(80,70,228,.03)}
+.import-zone .iz-icon{font-size:32px;margin-bottom:8px}
+.import-zone .iz-title{font-weight:700;font-size:14px;margin-bottom:4px}
+.import-zone .iz-sub{font-size:12px;color:var(--muted);margin-bottom:12px}
+.import-zone .iz-btn{display:inline-block;padding:7px 18px;background:var(--blue);color:#fff;border-radius:7px;font-size:12px;font-weight:600}
+.imp-status{padding:12px 18px;border-radius:8px;font-size:13px;font-weight:500;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+.imp-status.ok{background:rgba(0,169,110,.07);color:var(--green);border:1px solid rgba(0,169,110,.2)}
+.imp-status.err{background:rgba(232,41,74,.07);color:var(--red);border:1px solid rgba(232,41,74,.2)}
+.imp-status.loading{background:rgba(80,70,228,.07);color:var(--blue);border:1px solid rgba(80,70,228,.2)}
+
+/* COMPTA */
+.comptes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px;padding:16px 20px}
+.cr{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border-radius:7px;border:1px solid var(--border)}
+.cr label{font-size:11px;color:var(--muted);width:160px;flex-shrink:0}
+.cr .cn{width:66px;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:var(--blue);background:transparent;border:1px solid transparent;border-radius:4px;padding:2px 5px;outline:none;transition:all .2s}
+.cr .cn:focus{background:#fff;border-color:var(--blue)}
+.cr .cl{flex:1;font-size:12px;background:transparent;border:1px solid transparent;border-radius:4px;padding:2px 5px;outline:none;transition:all .2s}
+.cr .cl:focus{background:#fff;border-color:var(--border)}
+.export-btns{display:flex;gap:12px;flex-wrap:wrap;padding:18px 20px}
+.ebtn{display:flex;align-items:center;gap:12px;padding:14px 20px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .15s;text-align:left;min-width:180px}
+.ebtn:hover{border-color:var(--blue);background:rgba(80,70,228,.04)}
+.ebtn-title{font-weight:700;font-size:13px}
+.ebtn-sub{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;background:#fff;border:1px solid var(--green);color:var(--green);box-shadow:0 4px 20px rgba(0,0,0,.1);font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;padding:10px 18px;border-radius:8px;display:flex;align-items:center;gap:7px;opacity:0;transform:translateY(10px);transition:all .3s;z-index:9998;pointer-events:none}
+#toast.show{opacity:1;transform:translateY(0)}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--surface2)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ANALYSE SIMPLE */
+.analyse-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px 28px;margin-bottom:22px;position:relative;overflow:hidden}
+.analyse-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--vitry),var(--fer),var(--gen))}
+.analyse-title{font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:16px;color:var(--text);display:flex;align-items:center;gap:10px}
+.analyse-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px}
+.analyse-bloc{background:var(--surface2);border-radius:10px;padding:14px 16px;border-left:3px solid var(--border)}
+.analyse-bloc.ok{border-left-color:var(--green)}
+.analyse-bloc.warn{border-left-color:var(--gold)}
+.analyse-bloc.bad{border-left-color:var(--red)}
+.analyse-bloc .ab-icon{font-size:20px;margin-bottom:6px}
+.analyse-bloc .ab-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:4px}
+.analyse-bloc .ab-text{font-size:13px;color:var(--text);line-height:1.5}
+.analyse-conseil{background:rgba(80,70,228,.06);border:1px solid rgba(80,70,228,.15);border-radius:8px;padding:14px 16px;font-size:13px;color:var(--text);line-height:1.6;margin-top:12px}
+.analyse-conseil strong{color:var(--blue)}
+
+/* EMPRUNTS */
+.emprunt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;padding:18px 20px}
+.emprunt-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;position:relative}
+.emprunt-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.emprunt-card-head h4{font-size:13px;font-weight:700;color:var(--text)}
+.emprunt-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ef{display:flex;flex-direction:column;gap:3px}
+.ef label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+.ef input{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-family:'Outfit',sans-serif;font-size:13px;background:#fff;outline:none;transition:all .2s}
+.ef input:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(80,70,228,.1)}
+.ef.full{grid-column:1/-1}
+.emprunt-total{margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted)}
+.emprunt-total span{font-family:'DM Mono',monospace;font-weight:700;font-size:14px;color:var(--red)}
+.batch-zone{border:2px dashed var(--border);border-radius:10px;padding:20px 24px;margin:12px 16px;display:flex;align-items:center;gap:16px;cursor:pointer;transition:all .2s;background:#fafbfc}
+.batch-zone:hover,.batch-zone.drag-over{border-color:var(--blue);background:rgba(80,70,228,.03)}
+.batch-zone-icon{font-size:28px;flex-shrink:0}
+.batch-zone-text{flex:1}
+.batch-zone-title{font-weight:600;font-size:13px;color:var(--text);margin-bottom:2px}
+.batch-zone-sub{font-size:11px;color:var(--muted)}
+.batch-zone-btn{padding:6px 14px;background:var(--blue);color:#fff;border:none;border-radius:7px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.batch-queue{padding:0 16px 12px;display:none}
+.batch-queue-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:8px}
+.batch-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);margin-bottom:6px;font-size:12px}
+.batch-item-icon{font-size:16px;flex-shrink:0}
+.batch-item-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.batch-item-status{font-size:11px;font-weight:600;white-space:nowrap;padding:2px 8px;border-radius:4px}
+.batch-item-status.wait{background:rgba(107,110,130,.1);color:var(--muted)}
+.batch-item-status.running{background:rgba(80,70,228,.1);color:var(--blue)}
+.batch-item-status.done{background:rgba(0,169,110,.1);color:var(--green)}
+.batch-item-status.err{background:rgba(232,41,74,.1);color:var(--red)}
+.batch-progress{flex-shrink:0;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.batch-recettes-zone{border-color:var(--green)}
+.batch-recettes-zone:hover,.batch-recettes-zone.drag-over{border-color:var(--green);background:rgba(0,169,110,.03)}
+
+/* PIÈCES JOINTES */
+.pj-btn{background:none;border:1px dashed var(--border);color:var(--muted);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.pj-btn:hover{border-color:var(--blue);color:var(--blue)}
+.pj-thumb{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin:1px;transition:all .15s}
+.pj-thumb:hover{border-color:var(--red);color:var(--red)}
+.pj-cell{display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-width:120px}
+
+/* OCR */
+.ocr-btn{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:linear-gradient(135deg,#5046e4,#7c3aed);color:#fff;border:none;border-radius:7px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+.ocr-btn:hover{opacity:.88;transform:translateY(-1px)}
+.ocr-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+#ocr-modal{display:none;position:fixed;inset:0;z-index:9995;background:rgba(0,0,0,.6);align-items:center;justify-content:center}
+#ocr-modal.open{display:flex}
+#ocr-inner{background:#fff;border-radius:16px;padding:28px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+#ocr-inner h3{font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:6px}
+#ocr-inner p{font-size:13px;color:var(--muted);margin-bottom:20px}
+.ocr-preview{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:18px;max-height:200px;display:flex;align-items:center;justify-content:center;background:var(--surface2)}
+.ocr-preview img{max-width:100%;max-height:200px;object-fit:contain}
+.ocr-fields{display:grid;gap:10px;margin-bottom:20px}
+.ocr-field{display:flex;flex-direction:column;gap:4px}
+.ocr-field label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
+.ocr-field input,.ocr-field select{padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;color:var(--text);background:#fff;outline:none;transition:all .2s}
+.ocr-field input:focus,.ocr-field select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(80,70,228,.1)}
+.ocr-field input.ocr-filled{border-color:var(--green);background:rgba(0,169,110,.04)}
+.ocr-actions{display:flex;gap:10px;justify-content:flex-end}
+.ocr-confirm{padding:10px 22px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+.ocr-confirm:hover{background:#3d35c0}
+.ocr-cancel{padding:10px 22px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer}
+.ocr-cancel:hover{border-color:var(--red);color:var(--red)}
+.ocr-spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ocr-confidence{font-size:11px;padding:3px 8px;border-radius:4px;font-weight:600}
+.ocr-confidence.high{background:rgba(0,169,110,.12);color:var(--green)}
+.ocr-confidence.med{background:rgba(217,119,6,.12);color:var(--gold)}
+/* MODAL VIEWER */
+#pj-modal{display:none;position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,.75);align-items:center;justify-content:center}
+#pj-modal.open{display:flex}
+#pj-modal-inner{background:#fff;border-radius:12px;padding:20px;max-width:90vw;max-height:90vh;overflow:auto;position:relative}
+#pj-modal-close{position:absolute;top:12px;right:12px;background:var(--red);color:#fff;border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+#pj-modal img{max-width:80vw;max-height:75vh;border-radius:8px}
+#pj-modal iframe{width:80vw;height:75vh;border:none;border-radius:8px}
+</style>
+</head>
+<body>
+
+<!-- LOCK -->
+<div id="lock-screen">
+  <div class="lock-card">
+    <div style="font-size:42px;margin-bottom:14px">🔐</div>
+    <h2>Accès sécurisé</h2>
+    <p>Tableau de Gestion Immobilière<br>Entrez le mot de passe pour continuer.</p>
+    <div style="position:relative;margin-bottom:16px">
+      <input class="lock-input" type="password" id="pwd-input" placeholder="••••••••" style="margin-bottom:0;padding-right:44px">
+      <button onclick="var i=document.getElementById('pwd-input');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁️':'🙈'" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;padding:0">👁️</button>
+    </div>
+    <button class="lock-btn" id="lock-btn-main">Déverrouiller</button>
+    <div class="lock-err" id="lock-err"></div>
+  </div>
+</div>
+
+<script>
+// AUTH — exécuté immédiatement, pas besoin de window.load
+(function() {
+  var PWD = atob('RVZBMjAxMGV2YQ==');       // EVA2010eva
+  var COMPTA = atob('QXNmOTMxNjAq');         // Asf93160*
+  var attempts = 0;
+
+  function doUnlock() {
+    sessionStorage.setItem('auth','1');
+    document.getElementById('lock-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+  }
+
+  window.checkPwd = function() {
+    var inp = document.getElementById('pwd-input');
+    var err = document.getElementById('lock-err');
+    var val = inp.value;
+    if (val === PWD) {
+      inp.value = '';
+      doUnlock();
+    } else {
+      inp.value = '';
+      attempts++;
+      inp.classList.remove('shake');
+      inp.offsetWidth; // reflow
+      inp.classList.add('shake');
+      err.textContent = attempts >= 5 ? 'Trop de tentatives. Attendez 30s.' : 'Mot de passe incorrect (' + attempts + '/5)';
+    }
+  };
+
+  window.checkComptaPwd = function() {
+    var inp = document.getElementById('compta-pwd-input');
+    var err = document.getElementById('compta-pwd-err');
+    if (inp.value === COMPTA) {
+      inp.value = '';
+      sessionStorage.setItem('compta_auth','1');
+      document.getElementById('compta-lock').style.display = 'none';
+      document.getElementById('compta-content').style.display = 'block';
+    } else {
+      inp.value = '';
+      inp.classList.remove('shake');
+      inp.offsetWidth;
+      inp.classList.add('shake');
+      err.textContent = 'Mot de passe incorrect.';
+      setTimeout(function(){ err.textContent=''; }, 3000);
+    }
+  };
+
+  // Entrée clavier
+  document.getElementById('pwd-input').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') window.checkPwd();
+  });
+
+  // Bouton déverrouiller
+  document.getElementById('lock-btn-main').addEventListener('click', function(){
+    window.checkPwd();
+  });
+
+  // Session déjà active
+  if (sessionStorage.getItem('auth') === '1') doUnlock();
+
+  // showTab doit être global et disponible dès le HTML
+  window.showTab = function(id, btn) {
+    document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+    document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
+    var panel = document.getElementById('tab-' + id);
+    if (panel) panel.classList.add('active');
+    if (btn) btn.classList.add('active');
+    if (id === 'compta') {
+      var unlocked = sessionStorage.getItem('compta_auth') === '1';
+      var lock = document.getElementById('compta-lock');
+      var content = document.getElementById('compta-content');
+      if (lock) lock.style.display = unlocked ? 'none' : 'flex';
+      if (content) content.style.display = unlocked ? 'block' : 'none';
+    }
+  };
+})();
+</script>
+
+<div id="app" style="display:none">
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <h1>Gestion <span>Immobilière</span></h1>
+    <p>Vitry sur Seine · Ferrières en Brie · Charges Générales</p>
+  </div>
+  <div class="year-pill" id="yr"></div>
+</div>
+
+<!-- NAV -->
+<nav class="nav">
+  <button class="nav-btn active" onclick="showTab('synthese',this)"><span class="dot" style="background:var(--vitry)"></span>Vue Synthèse</button>
+  <button class="nav-btn" onclick="showTab('vitry',this)"><span class="dot" style="background:var(--vitry)"></span>Vitry sur Seine</button>
+  <button class="nav-btn" onclick="showTab('ferrieres',this)"><span class="dot" style="background:var(--fer)"></span>Ferrières en Brie</button>
+  <button class="nav-btn" onclick="showTab('generales',this)"><span class="dot" style="background:var(--gen)"></span>Charges Générales</button>
+  <button class="nav-btn" onclick="showTab('compta',this)"><span class="dot" style="background:#0ea5e9"></span>📒 Comptabilité</button>
+</nav>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <span>💾 Sauvegarde automatique</span>
+  <div class="tsep"></div>
+  <button class="tbtn" onclick="saveData()">💾 Sauvegarder</button>
+  <button class="tbtn danger" onclick="clearAll()">🗑️ Effacer</button>
+</div>
+
+<div class="main">
+
+<!-- ═══ SYNTHESE ═══ -->
+<div class="tab-panel active" id="tab-synthese">
+  <div class="banner neutral" id="syn-banner"><span>📊</span><span id="syn-text">Aucune donnée saisie.</span></div>
+  <div class="kpi-grid">
+    <div class="kpi green"><div class="kpi-accent"></div><div class="kpi-label">Total Recettes</div><div class="kpi-val" id="syn-rec">0 €</div><div class="kpi-sub">Tous biens</div></div>
+    <div class="kpi red"><div class="kpi-accent"></div><div class="kpi-label">Total Charges</div><div class="kpi-val" id="syn-dep">0 €</div><div class="kpi-sub">Dépenses + emprunts</div></div>
+    <div class="kpi blue"><div class="kpi-accent"></div><div class="kpi-label">Cash Flow Net</div><div class="kpi-val" id="syn-cf">0 €</div><div class="kpi-sub">Recettes − Tout</div></div>
+    <div class="kpi gold"><div class="kpi-accent"></div><div class="kpi-label">Rendement</div><div class="kpi-val" id="syn-rdt">—</div><div class="kpi-sub">CF / Recettes</div></div>
+    <div class="kpi red"><div class="kpi-accent"></div><div class="kpi-label">Mensualités emprunts</div><div class="kpi-val" id="syn-emp">0 €</div><div class="kpi-sub">Vitry + Ferrières</div></div>
+    <div class="kpi gold"><div class="kpi-accent"></div><div class="kpi-label">Intérêts déductibles</div><div class="kpi-val" id="syn-int">0 €</div><div class="kpi-sub">+ assurance emprunteur</div></div>
+  </div>
+  <div class="syn-matrix" style="grid-template-columns:repeat(5,1fr)">
+    <div class="sm hrow"></div>
+    <div class="sm hrow vc" style="color:var(--vitry)">Vitry</div>
+    <div class="sm hrow fc" style="color:var(--fer)">Ferrières</div>
+    <div class="sm hrow gc" style="color:var(--gen)">Générales</div>
+    <div class="sm hrow" style="color:#e8294a">Emprunts</div>
+    <div class="sm hrow" style="color:var(--muted)">Recettes</div>
+    <div class="sm vc"><div class="sv green" id="sm-vr">0 €</div></div>
+    <div class="sm fc"><div class="sv green" id="sm-fr">0 €</div></div>
+    <div class="sm gc"><div class="sv" style="color:var(--dim)">—</div></div>
+    <div class="sm" style="color:var(--dim)">—</div>
+    <div class="sm hrow" style="color:var(--muted)">Dépenses</div>
+    <div class="sm vc"><div class="sv red" id="sm-vd">0 €</div></div>
+    <div class="sm fc"><div class="sv red" id="sm-fd">0 €</div></div>
+    <div class="sm gc"><div class="sv red" id="sm-gd">0 €</div></div>
+    <div class="sm"><div class="sv red" id="sm-ed">0 €</div></div>
+    <div class="sm hrow" style="color:var(--muted)">Cash Flow</div>
+    <div class="sm vc"><div class="sv blue" id="sm-vc">0 €</div></div>
+    <div class="sm fc"><div class="sv blue" id="sm-fc">0 €</div></div>
+    <div class="sm gc"><div class="sv blue" id="sm-gc">0 €</div></div>
+    <div class="sm"><div class="sv blue" id="sm-ec">0 €</div></div>
+  </div>
+  <div class="two-col">
+    <div class="section"><div class="sec-head"><h3>Répartition dépenses</h3></div><div class="chart-box"><canvas id="chDep"></canvas></div></div>
+    <div class="section"><div class="sec-head"><h3>Recettes vs Dépenses</h3></div><div class="chart-box"><canvas id="chComp"></canvas></div></div>
+  </div>
+  <div class="section"><div class="sec-head"><h3>Dépenses par catégorie <span class="badge badge-red">TOUS BIENS</span></h3></div><div style="padding:18px 20px" id="syn-cats"><div class="empty"><div class="empty-icon">📂</div><p>Aucune dépense.</p></div></div></div>
+
+  <!-- ANALYSE EN LANGAGE SIMPLE -->
+  <div class="analyse-card" id="analyse-card">
+    <div class="analyse-title">💡 Mon tableau de bord en clair</div>
+    <div class="analyse-grid" id="analyse-grid">
+      <div class="analyse-bloc"><div class="ab-icon">📭</div><div class="ab-title">Situation</div><div class="ab-text">Aucune donnée saisie pour le moment. Commencez à renseigner vos loyers et dépenses.</div></div>
+    </div>
+    <div class="analyse-conseil" id="analyse-conseil" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ═══ VITRY ═══ -->
+<div class="tab-panel" id="tab-vitry">
+  <div class="mode-bar"><span class="mode-badge mb-long">🔑 Location Longue Durée</span><span style="color:var(--muted);font-size:12px">Vitry sur Seine · Bail classique</span></div>
+  <div class="banner neutral" id="v-banner"><span>🏠</span><span id="v-text">Aucune donnée saisie.</span></div>
+  <div class="kpi-grid">
+    <div class="kpi green"><div class="kpi-accent"></div><div class="kpi-label">Recettes</div><div class="kpi-val" id="v-rec">0 €</div><div class="kpi-sub">Loyers + Provisions</div></div>
+    <div class="kpi red"><div class="kpi-accent"></div><div class="kpi-label">Dépenses</div><div class="kpi-val" id="v-dep">0 €</div><div class="kpi-sub">Total charges</div></div>
+    <div class="kpi blue"><div class="kpi-accent"></div><div class="kpi-label">Cash Flow</div><div class="kpi-val" id="v-cf">0 €</div></div>
+    <div class="kpi gold"><div class="kpi-accent"></div><div class="kpi-label">Locataires</div><div class="kpi-val" id="v-nb">0</div></div>
+  </div>
+  <div class="section">
+    <div class="sec-head"><h3>👤 Locataires <span class="badge badge-blue">BAUX EN COURS</span></h3></div>
+    <table class="dt"><thead><tr><th>Appartement</th><th>Locataire</th><th>Date entrée</th><th>Date fin</th><th style="text-align:right">Dépôt garantie (€)</th><th></th></tr></thead><tbody id="v-loc"></tbody></table>
+    <button class="btn-add" onclick="addLocRow()">＋ Ajouter un locataire</button>
+  </div>
+  <div class="section">
+    <div class="sec-head"><h3>📥 Loyers perçus <span class="badge badge-green">ENTRÉE</span></h3><div style="display:flex;align-items:center;gap:8px"><button class="ocr-btn" onclick="openOCR('loyer')">🔍 OCR Quittance</button><span class="sec-total green" id="v-loy-tot">0,00 €</span></div></div>
+    <table class="dt"><thead><tr><th>Mois</th><th>Locataire</th><th>Appartement</th><th>Commentaire</th><th style="text-align:right">Montant (€)</th><th>Pièces jointes</th><th></th></tr></thead><tbody id="v-loy"></tbody></table>
+    <div class="batch-zone batch-recettes-zone" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="event.preventDefault();this.classList.remove('drag-over');batchProcess(event.dataTransfer.files,'loyer','v-loy','batch-vloy')" onclick="document.getElementById('batch-vloy-input').click()">
+      <input type="file" id="batch-vloy-input" accept="image/*,.pdf" multiple style="display:none" onchange="batchProcess(this.files,'loyer','v-loy','batch-vloy')">
+      <div class="batch-zone-icon">📂</div>
+      <div class="batch-zone-text"><div class="batch-zone-title">Déposer plusieurs quittances de loyer</div><div class="batch-zone-sub">Glissez plusieurs fichiers ou cliquez · OCR automatique sur chacun</div></div>
+      <div class="batch-zone-btn" style="background:var(--green)">Sélectionner</div>
+    </div>
+    <div class="batch-queue" id="batch-vloy-queue"><div class="batch-queue-title">File de traitement</div><div id="batch-vloy-items"></div></div>
+    <button class="btn-add" onclick="addLoyRow()">＋ Ajouter manuellement</button>
+  </div>
+  <div class="section">
+    <div class="sec-head"><h3>📥 Provisions sur charges <span class="badge badge-green">AUTO</span></h3><span class="sec-total green" id="v-prv-tot">0,00 €</span></div>
+    <table class="dt"><thead><tr><th>Mois</th><th>Locataire</th><th>Appartement</th><th>Commentaire</th><th style="text-align:right">Montant (€)</th><th>Pièces jointes</th><th></th></tr></thead><tbody id="v-prv"></tbody></table>
+    <div style="margin:10px 16px;padding:12px 16px;background:rgba(0,169,110,.06);border:1px solid rgba(0,169,110,.2);border-radius:8px;font-size:12px;color:var(--green);display:flex;align-items:center;gap:10px">
+      <span style="font-size:16px">ℹ️</span>
+      <span>Les provisions sur charges sont extraites <strong>automatiquement</strong> depuis les quittances de loyer déposées ci-dessus. Une ligne est créée ici dès qu'un montant de charges est détecté sur la quittance.</span>
+    </div>
+    <button class="btn-add" onclick="addPrvRow()">＋ Ajouter manuellement</button>
+  </div>
+  <div class="section">
+    <div class="sec-head"><h3>📤 Dépenses <span class="badge badge-red">SORTIE</span></h3><div style="display:flex;align-items:center;gap:8px"><button class="ocr-btn" onclick="openOCR('depense','v-dep-tb')">🔍 OCR Facture</button><span class="sec-total red" id="v-dep-tot">0,00 €</span></div></div>
+    <table class="dt"><thead><tr><th>Date</th><th>Fournisseur</th><th>Catégorie</th><th>Locataire concerné</th><th style="text-align:right">Montant (€)</th><th>Pièces jointes</th><th></th></tr></thead><tbody id="v-dep-tb"></tbody></table>
+    <div class="batch-zone" id="batch-vdep-zone" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="event.preventDefault();this.classList.remove('drag-over');batchProcess(event.dataTransfer.files,'depense','v-dep-tb','batch-vdep')" onclick="document.getElementById('batch-vdep-input').click()">
+      <input type="file" id="batch-vdep-input" accept="image/*,.pdf" multiple style="display:none" onchange="batchProcess(this.files,'depense','v-dep-tb','batch-vdep')">
+      <div class="batch-zone-icon">📂</div>
+      <div class="batch-zone-text"><div class="batch-zone-title">Déposer plusieurs factures d'achat</div><div class="batch-zone-sub">Glissez plusieurs fichiers ou cliquez · JPG, PNG, PDF · OCR automatique sur chacun</div></div>
+      <div class="batch-zone-btn">Sélectionner</div>
+    </div>
+    <div class="batch-queue" id="batch-vdep-queue"><div class="batch-queue-title">File de traitement</div><div id="batch-vdep-items"></div></div>
+    <button class="btn-add" onclick="addDepRow('v-dep-tb')">＋ Ajouter manuellement</button>
+  </div>
+  <div class="section"><div class="sec-head"><h3>Répartition par catégorie</h3></div><div style="padding:18px 20px" id="v-cats"><div class="empty"><div class="empty-icon">📂</div><p>Aucune dépense.</p></div></div></div>
+
+  <!-- EMPRUNT VITRY -->
+  <div class="section" style="border-top:3px solid var(--red)">
+    <div class="sec-head" style="background:rgba(232,41,74,.04)">
+      <h3>🏦 Emprunt — Vitry sur Seine <span class="badge badge-red">CRÉDIT IMMOBILIER</span></h3>
+      <span class="sec-total red" id="v-emp-tot">0,00 €</span>
+    </div>
+    <!-- Fiche emprunt -->
+    <div style="padding:16px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;border-bottom:1px solid var(--border)">
+      <div class="ef"><label>Banque prêteuse</label><input type="text" id="v-emp-banque" placeholder="Ex : Crédit Agricole" oninput="recalc()"></div>
+      <div class="ef"><label>Capital emprunté (€)</label><input type="number" id="v-emp-capital" placeholder="0" oninput="recalc()"></div>
+      <div class="ef"><label>Taux annuel (%)</label><input type="number" id="v-emp-taux" placeholder="0,00" step="0.01" oninput="calcAmortV()"></div>
+      <div class="ef"><label>Durée totale (mois)</label><input type="number" id="v-emp-duree" placeholder="0" oninput="calcAmortV()"></div>
+      <div class="ef"><label>Mensualité hors assurance (€)</label><input type="number" id="v-emp-mens" placeholder="0,00" step="0.01" oninput="recalc()"></div>
+      <div class="ef"><label>Assurance mensuelle (€)</label><input type="number" id="v-emp-ass" placeholder="0,00" step="0.01" oninput="recalc()"></div>
+    </div>
+    <!-- Échéances détaillées -->
+    <div class="sec-head" style="border-top:none;border-bottom:1px solid var(--border)">
+      <h3 style="font-size:11px">📋 Échéances mensuelles (capital · intérêts · assurance)</h3>
+      <div style="display:flex;gap:8px">
+        <button class="ocr-btn" onclick="openOCR('emprunt','v-ech-tb')">🔍 OCR Tableau</button>
+      </div>
+    </div>
+    <table class="dt"><thead><tr><th>Mois</th><th style="text-align:right">Capital (€)</th><th style="text-align:right">Intérêts (€)</th><th style="text-align:right">Assurance (€)</th><th style="text-align:right">Total (€)</th><th>Pièces jointes</th><th></th></tr></thead><tbody id="v-ech-tb"></tbody></table>
+    <div class="batch-zone" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="event.preventDefault();this.classList.remove('drag-over');batchProcess(event.dataTransfer.files,'emprunt','v-ech-tb','batch-vemp')" onclick="document.getElementById('batch-vemp-input').click()">
+      <input type="file" id="batch-vemp-input" accept="image/*,.pdf" multiple style="display:none" onchange="batchProcess(this.files,'emprunt','v-ech-tb','batch-vemp')">
+      <div class="batch-zone-icon">📂</div>
+      <div class="batch-zone-text"><div class="batch-zone-title">Déposer tableaux d'amortissement ou relevés bancaires</div><div class="batch-zone-sub">L'OCR distingue automatiquement capital · intérêts · assurance</div></div>
+      <div class="batch-zone-btn">Sélectionner</div>
+    </div>
+    <div class="batch-queue" id="batch-vemp-queue"><div class="batch-queue-title">File de traitement</div><div id="batch-vemp-items"></div></div>
+    <button class="btn-add" onclick="addEchRow('v-ech-tb')">＋ Ajouter une échéance manuellement</button>
+    <!-- Tableau d'amortissement calculé -->
+    <div style="padding:0 16px 12px">
+      <button onclick="toggleAmort('v')" style="background:none;border:1px solid var(--border);border-radius:7px;padding:7px 14px;font-family:Outfit,sans-serif;font-size:12px;cursor:pointer;color:var(--muted);margin-top:8px">
+        📊 Afficher / Masquer le tableau d'amortissement calculé
+      </button>
+      <div id="v-amort-wrap" style="display:none;margin-top:12px;overflow-x:auto">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Calculé à partir des paramètres saisis ci-dessus · Vue annuelle par défaut</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <button onclick="setAmortView('v','annuel')" id="v-btn-an" style="padding:4px 12px;border-radius:6px;border:1px solid var(--blue);background:var(--blue);color:#fff;font-size:11px;cursor:pointer;font-family:Outfit,sans-serif">Annuel</button>
+          <button onclick="setAmortView('v','mensuel')" id="v-btn-men" style="padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer;font-family:Outfit,sans-serif">Mensuel</button>
+        </div>
+        <table class="dt" id="v-amort-table"><thead><tr><th>Période</th><th style="text-align:right">Capital remboursé (€)</th><th style="text-align:right">Intérêts (€)</th><th style="text-align:right">Assurance (€)</th><th style="text-align:right">Mensualité totale (€)</th><th style="text-align:right">Capital restant dû (€)</th></tr></thead><tbody id="v-amort-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="tab-panel" id="tab-ferrieres">
+  <div class="mode-bar"><span class="mode-badge mb-air">🏷️ Location Courte Durée — Airbnb</span><span style="color:var(--muted);font-size:12px">Ferrières en Brie · Nuitées</span></div>
+  <div class="import-zone" onclick="document.getElementById('pdf-in').click()" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="event.preventDefault();this.classList.remove('drag-over');importAirbnb(event.dataTransfer.files[0])">
+    <input type="file" id="pdf-in" accept=".pdf" style="display:none" onchange="importAirbnb(this.files[0])">
+    <div class="iz-icon">📄</div>
+    <div class="iz-title">Importer le rapport Airbnb (PDF)</div>
+    <div class="iz-sub">Glissez-déposez ou cliquez · Format Airbnb « Rapport de revenus »</div>
+    <div class="iz-btn">Sélectionner un fichier PDF</div>
+  </div>
+  <div id="air-status" style="display:none" class="imp-status"></div>
+  <div class="banner neutral" id="f-banner"><span>🏡</span><span id="f-text">Aucune donnée saisie.</span></div>
+  <div class="kpi-grid">
+    <div class="kpi green"><div class="kpi-accent"></div><div class="kpi-label">Revenus nets</div><div class="kpi-val" id="f-rec">0 €</div><div class="kpi-sub">Après frais Airbnb</div></div>
+    <div class="kpi gold"><div class="kpi-accent"></div><div class="kpi-label">Revenus bruts</div><div class="kpi-val" id="f-brut">0 €</div><div class="kpi-sub">Avant frais</div></div>
+    <div class="kpi red"><div class="kpi-accent"></div><div class="kpi-label">Dépenses</div><div class="kpi-val" id="f-dep">0 €</div></div>
+    <div class="kpi blue"><div class="kpi-accent"></div><div class="kpi-label">Nuits réservées</div><div class="kpi-val" id="f-nb">0</div></div>
+  </div>
+  <div class="section">
+    <div class="sec-head"><h3>🏠 Recettes par logement <span class="badge badge-green">AIRBNB</span></h3><span class="sec-total green" id="f-rec-tot">0,00 €</span></div>
+    <table class="dt"><thead><tr><th>Logement</th><th style="text-align:right">Brut (€)</th><th style="text-align:right">Régularisations (€)</th><th style="text-align:right">Frais service (€)</th><th style="text-align:right">Net (€)</th><th style="text-align:right">Nuits</th></tr></thead>
+    <tbody id="f-log"><tr><td colspan="6"><div class="empty"><div class="empty-icon">📄</div><p>Importez le rapport Airbnb PDF</p></div></td></tr></tbody></table>
+  </div>
+  <div class="section">
+    <div class="sec-head"><h3>📅 Revenus mensuels <span class="badge badge-green">ENTRÉES</span></h3></div>
+    <table class="dt"><thead><tr><th>Mois</th><th style="text-align:right">Brut (€)</th><th style="text-align:right">Net (€)</th></tr></thead>
+    <tbody id="f-men"><tr><td colspan="3" style="padding:20px;text-align:center;color:var(--dim)">Importez le rapport PDF</td></tr></tbody></table>
+  </div>
+  <div class="section">
+    <div class="sec-head"><h3>📤 Dépenses <span class="badge badge-red">SORTIE</span></h3><div style="display:flex;align-items:center;gap:8px"><button class="ocr-btn" onclick="openOCR('depense','f-dep-tb')">🔍 OCR Facture</button><span class="sec-total red" id="f-dep-tot">0,00 €</span></div></div>
+    <table class="dt"><thead><tr><th>Date</th><th>Fournisseur</th><th>Catégorie</th><th>Commentaire</th><th style="text-align:right">Montant (€)</th><th>Pièces jointes</th><th></th></tr></thead><tbody id="f-dep-tb"></tbody></table>
+    <div class="batch-zone" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="event.preventDefault();this.classList.remove('drag-over');batchProcess(event.dataTransfer.files,'depense','f-dep-tb','batch-fdep')" onclick="document.getElementById('batch-fdep-input').click()">
+      <input type="file" id="batch-fdep-input" accept="image/*,.pdf" multiple style="display:none" onchange="batchProcess(this.files,'depense','f-dep-tb','batch-fdep')">
+      <div class="batch-zone-icon">📂</div>
+      <div class="batch-zone-text"><div class="batch-zone-title">Déposer plusieurs factures d'achat</div><div class="batch-zone-sub">Glissez plusieurs fichiers ou cliquez · OCR automatique sur chacun</div></div>
+      <div class="batch-zone-btn">Sélectionner</div>
+    </div>
+    <div class="batch-queue" id="batch-fdep-queue"><div class="batch-queue-title">File de traitement</div><div id="batch-fdep-items"></div></div>
+    <button class="btn-add" onclick="addDepRow('f-dep-tb')">＋ Ajouter manuellement</button>
+  </div>
+  <div class="section"><div class="sec-head"><h3>Répartition par catégorie</h3></div><div style="padding:18px 20px" id="f-cats"><div class="empty"><div class="empty-icon">📂</div><p>Aucune dépense.</p></div></div></div>
+
+  <!-- EMPRUNT FERRIERES -->
+  <div class="section" style="border-top:3px solid var(--red)">
+    <div class="sec-head" style="background:rgba(232,41,74,.04)">
+      <h3>🏦 Emprunt — Ferrières en Brie <span class="badge badge-red">CRÉDIT IMMOBILIER</span></h3>
+      <span class="sec-total red" id="f-emp-tot">0,00 €</span>
+    </div>
+    <div style="padding:16px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;border-bottom:1px solid var(--border)">
+      <div class="ef"><label>Banque prêteuse</label><input type="text" id="f-emp-banque" placeholder="Ex : BNP Paribas" oninput="recalc()"></div>
+      <div class="ef"><label>Capital emprunté (€)</label><input type="number" id="f-emp-capital" placeholder="0" oninput="recalc()"></div>
+      <div class="ef"><label>Taux annuel (%)</label><input type="number" id="f-emp-taux" placeholder="0,00" step="0.01" oninput="calcAmortF()"></div>
+      <div class="ef"><label>Durée totale (mois)</label><input type="number" id="f-emp-duree" placeholder="0" oninput="calcAmortF()"></div>
+      <div class="ef"><label>Mensualité hors assurance (€)</label><input type="number" id="f-emp-mens" placeholder="0,00" step="0.01" oninput="recalc()"></div>
+      <div class="ef"><label>Assurance mensuelle (€)</label><input type="number" id="f-emp-ass" placeholder="0,00" step="0.01" oninput="recalc()"></div>
+    </div>
+    <div class="sec-head" style="border-top:none;border-bottom:1px solid var(--border)">
+      <h3 style="font-size:11px">📋 Échéances mensuelles (capital · intérêts · assurance)</h3>
+      <div style="display:flex;gap:8px">
+        <button class="ocr-btn" onclick="openOCR('emprunt','f-ech-tb')">🔍 OCR Tableau</button>
+      </div>
+    </div>
+    <table class="dt"><thead><tr><th>Mois</th><th style="text-align:right">Capital (€)</th><th style="text-align:right">Intérêts (€)</th><th style="text-align:right">Assurance (€)</th><th style="text-align:right">Total (€)</th><th>Pièces jointes</th><th></th></tr></thead><tbody id="f-ech-tb"></tbody></table>
+    <div class="batch-zone" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="event.preventDefault();this.classList.remove('drag-over');batchProcess(event.dataTransfer.files,'emprunt','f-ech-tb','batch-femp')" onclick="document.getElementById('batch-femp-input').click()">
+      <input type="file" id="batch-femp-input" accept="image/*,.pdf" multiple style="display:none" onchange="batchProcess(this.files,'emprunt','f-ech-tb','batch-femp')">
+      <div class="batch-zone-icon">📂</div>
+      <div class="batch-zone-text"><div class="batch-zone-title">Déposer tableaux d'amortissement ou relevés bancaires</div><div class="batch-zone-sub">L'OCR distingue automatiquement capital · intérêts · assurance</div></div>
+      <div class="batch-zone-btn">Sélectionner</div>
+    </div>
+    <div class="batch-queue" id="batch-femp-queue"><div class="batch-queue-title">File de traitement</div><div id="batch-femp-items"></div></div>
+    <button class="btn-add" onclick="addEchRow('f-ech-tb')">＋ Ajouter une échéance manuellement</button>
+    <div style="padding:0 16px 12px">
+      <button onclick="toggleAmort('f')" style="background:none;border:1px solid var(--border);border-radius:7px;padding:7px 14px;font-family:Outfit,sans-serif;font-size:12px;cursor:pointer;color:var(--muted);margin-top:8px">
+        📊 Afficher / Masquer le tableau d'amortissement calculé
+      </button>
+      <div id="f-amort-wrap" style="display:none;margin-top:12px;overflow-x:auto">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Calculé à partir des paramètres saisis ci-dessus · Vue annuelle par défaut</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <button onclick="setAmortView('f','annuel')" id="f-btn-an" style="padding:4px 12px;border-radius:6px;border:1px solid var(--blue);background:var(--blue);color:#fff;font-size:11px;cursor:pointer;font-family:Outfit,sans-serif">Annuel</button>
+          <button onclick="setAmortView('f','mensuel')" id="f-btn-men" style="padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer;font-family:Outfit,sans-serif">Mensuel</button>
+        </div>
+        <table class="dt" id="f-amort-table"><thead><tr><th>Période</th><th style="text-align:right">Capital remboursé (€)</th><th style="text-align:right">Intérêts (€)</th><th style="text-align:right">Assurance (€)</th><th style="text-align:right">Mensualité totale (€)</th><th style="text-align:right">Capital restant dû (€)</th></tr></thead><tbody id="f-amort-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ GENERALES ═══ -->
+<div class="tab-panel" id="tab-generales">
+  <div class="banner neutral" id="g-banner"><span>📋</span><span id="g-text">Aucune charge générale saisie.</span></div>
+  <div class="kpi-grid">
+    <div class="kpi red"><div class="kpi-accent"></div><div class="kpi-label">Total Charges</div><div class="kpi-val" id="g-dep">0 €</div></div>
+    <div class="kpi gold"><div class="kpi-accent"></div><div class="kpi-label">Nb. lignes</div><div class="kpi-val" id="g-nb">0</div></div>
+  </div>
+  <div class="section">
+    <div class="sec-head"><h3>📤 Charges Générales <span class="badge badge-red">SORTIE</span></h3><div style="display:flex;align-items:center;gap:8px"><button class="ocr-btn" onclick="openOCR('depense','g-dep-tb')">🔍 OCR Facture</button><span class="sec-total red" id="g-dep-tot">0,00 €</span></div></div>
+    <table class="dt"><thead><tr><th>Date</th><th>Fournisseur</th><th>Catégorie</th><th>Commentaire</th><th style="text-align:right">Montant (€)</th><th>Pièces jointes</th><th></th></tr></thead><tbody id="g-dep-tb"></tbody></table>
+    <div class="batch-zone" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="event.preventDefault();this.classList.remove('drag-over');batchProcess(event.dataTransfer.files,'depense','g-dep-tb','batch-gdep')" onclick="document.getElementById('batch-gdep-input').click()">
+      <input type="file" id="batch-gdep-input" accept="image/*,.pdf" multiple style="display:none" onchange="batchProcess(this.files,'depense','g-dep-tb','batch-gdep')">
+      <div class="batch-zone-icon">📂</div>
+      <div class="batch-zone-text"><div class="batch-zone-title">Déposer plusieurs factures d'achat</div><div class="batch-zone-sub">Glissez plusieurs fichiers ou cliquez · OCR automatique sur chacun</div></div>
+      <div class="batch-zone-btn">Sélectionner</div>
+    </div>
+    <div class="batch-queue" id="batch-gdep-queue"><div class="batch-queue-title">File de traitement</div><div id="batch-gdep-items"></div></div>
+    <button class="btn-add" onclick="addDepRow('g-dep-tb')">＋ Ajouter manuellement</button>
+  </div>
+  <div class="section"><div class="sec-head"><h3>Répartition par catégorie</h3></div><div style="padding:18px 20px" id="g-cats"><div class="empty"><div class="empty-icon">📂</div><p>Aucune dépense.</p></div></div></div>
+</div>
+
+<!-- ═══ COMPTABILITE ═══ -->
+<div class="tab-panel" id="tab-compta">
+  <!-- Verrou comptabilité -->
+  <div id="compta-lock" style="display:flex;align-items:center;justify-content:center;min-height:400px">
+    <div class="lock-card" style="width:340px;padding:36px 32px 28px">
+      <div style="font-size:36px;margin-bottom:12px">🔒</div>
+      <h2 style="font-size:18px">Accès comptable restreint</h2>
+      <p style="margin-top:6px;margin-bottom:22px">Ce module est réservé au comptable.<br>Entrez le mot de passe professionnel.</p>
+      <div style="position:relative;margin-bottom:16px">
+        <input class="lock-input" type="password" id="compta-pwd-input" placeholder="••••••••" style="margin-bottom:0;padding-right:44px" onkeydown="if(event.key==='Enter')checkComptaPwd()">
+        <button id="eye-compta" onclick="togglePwd('compta-pwd-input','eye-compta')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;padding:0;line-height:1">👁️</button>
+      </div>
+      <button class="lock-btn" onclick="checkComptaPwd()">Accéder au module</button>
+      <div class="lock-err" id="compta-pwd-err"></div>
+    </div>
+  </div>
+  <!-- Contenu comptabilité (caché par défaut) -->
+  <div id="compta-content" style="display:none">
+  <div class="mode-bar"><span class="mode-badge mb-compta">📒 Module Comptable</span><span style="color:var(--muted);font-size:12px">BIC réel LMNP/LMP · Export FEC Fulll · PCG</span></div>
+  <div class="section">
+    <div class="sec-head"><h3>📂 Plan comptable <span class="badge badge-blue">IMPORT PDF</span></h3>
+      <button class="tbtn" onclick="document.getElementById('pc-in').click()">📤 Importer plan comptable</button>
+    </div>
+    <input type="file" id="pc-in" accept=".pdf" style="display:none" onchange="importPC(this.files[0])">
+    <div id="pc-status" style="display:none;padding:10px 18px;font-size:13px;font-weight:500"></div>
+    <div class="comptes-grid" id="pc-grid"></div>
+  </div>
+  <div class="section">
+    <div class="sec-head"><h3>📋 Journal des écritures</h3>
+      <button class="tbtn" style="background:var(--blue);color:#fff;border-color:var(--blue)" onclick="genEcritures()">⚙️ Générer les écritures</button>
+    </div>
+    <div id="ec-status" style="padding:12px 18px;font-size:13px;color:var(--muted)">Cliquez sur « Générer » pour créer le journal.</div>
+    <div style="overflow-x:auto">
+      <table class="dt" id="ec-table" style="display:none;min-width:900px">
+        <thead><tr><th>N° Pièce</th><th>Date</th><th>Journal</th><th>N° Compte</th><th>Libellé compte</th><th>Libellé écriture</th><th style="text-align:right">Débit (€)</th><th style="text-align:right">Crédit (€)</th></tr></thead>
+        <tbody id="ec-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="section">
+    <div class="sec-head"><h3>📤 Exports</h3></div>
+    <div class="export-btns">
+      <button class="ebtn" onclick="exportFEC()"><span style="font-size:22px">📄</span><div><div class="ebtn-title">Export FEC</div><div class="ebtn-sub">Format Fulll · séparateur | · UTF-8</div></div></button>
+      <button class="ebtn" onclick="exportCSV()"><span style="font-size:22px">📊</span><div><div class="ebtn-title">Export Excel</div><div class="ebtn-sub">CSV structuré · prêt à vérifier</div></div></button>
+    </div>
+  </div>
+  </div><!-- /compta-content -->
+</div><!-- /tab-compta -->
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- MODAL OCR -->
+<div id="ocr-modal">
+  <div id="ocr-inner">
+    <h3>🔍 Reconnaissance de document</h3>
+    <p id="ocr-modal-desc">Importez une photo ou un PDF — Claude extrait automatiquement les données.</p>
+    <div id="ocr-upload-zone" style="border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;cursor:pointer;background:var(--surface2);margin-bottom:16px;transition:all .2s"
+      onclick="document.getElementById('ocr-file-input').click()"
+      ondragover="event.preventDefault();this.style.borderColor='var(--blue)'"
+      ondragleave="this.style.borderColor='var(--border)'"
+      ondrop="event.preventDefault();this.style.borderColor='var(--border)';handleOCRFile(event.dataTransfer.files[0])">
+      <input type="file" id="ocr-file-input" accept="image/*,.pdf" style="display:none" onchange="handleOCRFile(this.files[0])">
+      <div style="font-size:32px;margin-bottom:8px">📷</div>
+      <div style="font-weight:600;font-size:14px;margin-bottom:4px">Glissez-déposez ou cliquez</div>
+      <div style="font-size:12px;color:var(--muted)">Photo, scan, JPG, PNG, PDF</div>
+    </div>
+    <div class="ocr-preview" id="ocr-preview" style="display:none"></div>
+    <div id="ocr-status" style="display:none;text-align:center;padding:16px;color:var(--blue);font-size:13px;font-weight:500"></div>
+    <div id="ocr-fields-wrap" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)">Données extraites — vérifiez avant de valider</span>
+        <span class="ocr-confidence" id="ocr-conf"></span>
+      </div>
+      <div class="ocr-fields" id="ocr-fields"></div>
+    </div>
+    <div class="ocr-actions">
+      <button class="ocr-cancel" onclick="closeOCR()">Annuler</button>
+      <button class="ocr-confirm" id="ocr-confirm-btn" style="display:none" onclick="confirmOCR()">✅ Ajouter la ligne</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PIÈCE JOINTE -->
+<div id="pj-modal">
+  <div id="pj-modal-inner">
+    <button id="pj-modal-close" onclick="closePJ()">✕</button>
+    <div id="pj-modal-body"></div>
+  </div>
+</div>
+
+<div id="toast">✅ Données sauvegardées</div>
+
+<script>
+// ══ NAV — showTab défini dans le script inline au-dessus ══
+
+// ══ CONFIG ══
+document.addEventListener('DOMContentLoaded', function() {
+document.getElementById('yr').textContent = new Date().getFullYear();
+if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const CATS = [
+  '6061 - Fournitures non stockables (eau, énergie)',
+  '6063 - Fournitures entretien et petit équipement',
+  '6064 - Fournitures administratives',
+  '6068 - Autres matières et fournitures',
+  '6111 - Sous-traitance générale',
+  '6132 - Charges de copropriété',
+  '6135 - Locations mobilières',
+  '6155 - Entretien et réparations immobiliers',
+  '6156 - Entretien et réparations mobiliers',
+  '6160 - Primes d assurance',
+  '6226 - Commissions et courtages (Airbnb, agences)',
+  '6228 - Honoraires comptables et juridiques',
+  '6261 - Téléphonie et internet',
+  '6270 - Frais bancaires',
+  '6350 - Taxe foncière',
+  '6351 - CFE',
+  '6354 - Taxe ordures ménagères',
+  '6615 - Intérêts des emprunts',
+  '6616 - Intérêts bancaires',
+  '6811 - Dotations amortissements corporels',
+  '2181 - Agencements et aménagements',
+  '2184 - Mobilier',
+  '2183 - Matériel bureau et informatique',
+  '6288 - Autres charges diverses',
+];
+const CAT_COLORS = {
+  '6061 - Fournitures non stockables (eau, énergie)':'#00bcd4',
+  '6063 - Fournitures entretien et petit équipement':'#00d68f',
+  '6064 - Fournitures administratives':'#26c6da',
+  '6068 - Autres matières et fournitures':'#80deea',
+  '6111 - Sous-traitance générale':'#e91e63',
+  '6132 - Charges de copropriété':'#4caf50',
+  '6135 - Locations mobilières':'#8bc34a',
+  '6155 - Entretien et réparations immobiliers':'#f44336',
+  '6156 - Entretien et réparations mobiliers':'#ef9a9a',
+  '6160 - Primes d assurance':'#9c27b0',
+  '6226 - Commissions et courtages (Airbnb, agences)':'#ff9800',
+  '6228 - Honoraires comptables et juridiques':'#3f51b5',
+  '6261 - Téléphonie et internet':'#009688',
+  '6270 - Frais bancaires':'#607d8b',
+  '6350 - Taxe foncière':'#795548',
+  '6351 - CFE':'#ff5722',
+  '6354 - Taxe ordures ménagères':'#a1887f',
+  '6615 - Intérêts des emprunts':'#ff9800',
+  '6616 - Intérêts bancaires':'#ffc107',
+  '6811 - Dotations amortissements corporels':'#78909c',
+  '2181 - Agencements et aménagements':'#6c63ff',
+  '2184 - Mobilier':'#00acc1',
+  '2183 - Matériel bureau et informatique':'#5c6bc0',
+  '6288 - Autres charges diverses':'#90a4ae',
+};
+
+// ══ ROW HELPERS ══
+function catOpts(sel='') { return CATS.map(c=>`<option value="${c}"${sel===c?' selected':''}>${c}</option>`).join(''); }
+function delBtn(){ return `<button class="btn-del" onclick="this.closest('tr').remove();recalc()">✕</button>`; }
+
+function addDepRow(id, date='', fourn='', cat='', comment='', amt='', pj=[]) {
+  const tb = document.getElementById(id);
+  const tr = document.createElement('tr');
+  tr.dataset.pj = JSON.stringify(pj);
+  tr.innerHTML = `
+    <td><input type="date" value="${date}" style="width:120px" onchange="recalc()"></td>
+    <td><input type="text" placeholder="Fournisseur" value="${fourn}" oninput="recalc()"></td>
+    <td><select onchange="recalc()"><option value="">— Catégorie —</option>${catOpts(cat)}</select></td>
+    <td><input type="text" placeholder="Commentaire" value="${comment}"></td>
+    <td><input type="number" min="0" step="0.01" placeholder="0,00" value="${amt}" style="text-align:right;width:90px;color:var(--red)" onchange="recalc()"></td>
+    <td><div class="pj-cell" id="pjcell_${Math.random().toString(36).slice(2)}">${renderPJThumbs(pj)}<label class="pj-btn">📎 <input type="file" accept="image/*,.pdf" multiple style="display:none" onchange="addPJFiles(this)"> Joindre</label></div></td>
+    <td>${delBtn()}</td>`;
+  tb.appendChild(tr);
+  // Restore PJ data
+  if (pj.length) {
+    const cell = tr.querySelector('.pj-cell');
+    pj.forEach(f => addPJThumb(cell, f, tr));
+  }
+}
+
+function addLoyRow(mois='',loc='',appt='',com='',amt='',pj=[]) {
+  const tb = document.getElementById('v-loy');
+  const tr = document.createElement('tr');
+  tr.dataset.pj = JSON.stringify(pj);
+  tr.innerHTML = `
+    <td><input type="month" value="${mois}" style="width:120px" onchange="recalc()"></td>
+    <td><input type="text" placeholder="Locataire" value="${loc}"></td>
+    <td><input type="text" placeholder="Appart" value="${appt}" style="width:70px"></td>
+    <td><input type="text" placeholder="Commentaire" value="${com}"></td>
+    <td><input type="number" min="0" step="0.01" placeholder="0,00" value="${amt}" style="text-align:right;width:90px;color:var(--green)" onchange="recalc()"></td>
+    <td><div class="pj-cell"><label class="pj-btn">📎 <input type="file" accept="image/*,.pdf" multiple style="display:none" onchange="addPJFiles(this)"> Joindre</label></div></td>
+    <td>${delBtn()}</td>`;
+  tb.appendChild(tr);
+}
+
+function addPrvRow(mois='',loc='',appt='',com='',amt='',pj=[]) {
+  const tb = document.getElementById('v-prv');
+  const tr = document.createElement('tr');
+  tr.dataset.pj = JSON.stringify(pj);
+  tr.innerHTML = `
+    <td><input type="month" value="${mois}" style="width:120px" onchange="recalc()"></td>
+    <td><input type="text" placeholder="Locataire" value="${loc}"></td>
+    <td><input type="text" placeholder="Appart" value="${appt}" style="width:70px"></td>
+    <td><input type="text" placeholder="Commentaire" value="${com}"></td>
+    <td><input type="number" min="0" step="0.01" placeholder="0,00" value="${amt}" style="text-align:right;width:90px;color:var(--green)" onchange="recalc()"></td>
+    <td><div class="pj-cell"><label class="pj-btn">📎 <input type="file" accept="image/*,.pdf" multiple style="display:none" onchange="addPJFiles(this)"> Joindre</label></div></td>
+    <td>${delBtn()}</td>`;
+  tb.appendChild(tr);
+}
+
+function addLocRow(appt='',nom='',de='',df='',dg='') {
+  const tb = document.getElementById('v-loc');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input type="text" placeholder="Appart 1" value="${appt}" style="width:90px"></td>
+    <td><input type="text" placeholder="Nom prénom" value="${nom}"></td>
+    <td><input type="date" value="${de}" style="width:130px"></td>
+    <td><input type="date" value="${df}" style="width:130px"></td>
+    <td><input type="number" min="0" step="0.01" placeholder="0,00" value="${dg}" style="text-align:right;width:110px;color:var(--muted)" onchange="recalc()"></td>
+    <td>${delBtn()}</td>`;
+  tb.appendChild(tr);
+}
+
+// ══ TOTALS ══
+function sumTb(id) {
+  let t=0;
+  document.querySelectorAll(`#${id} tr`).forEach(tr=>{
+    const nums=tr.querySelectorAll('input[type="number"]');
+    if(nums.length) t+=parseFloat(nums[nums.length-1].value)||0;
+  });
+  return t;
+}
+function catTotals(id) {
+  const c={};
+  document.querySelectorAll(`#${id} tr`).forEach(tr=>{
+    const sel=tr.querySelector('select'); const nums=tr.querySelectorAll('input[type="number"]');
+    if(!sel||!nums.length) return;
+    const cat=sel.value||'AUTRE'; const amt=parseFloat(nums[nums.length-1].value)||0;
+    if(amt>0) c[cat]=(c[cat]||0)+amt;
+  });
+  return c;
+}
+function fmt(n){ return n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
+function fmtS(n){ return n.toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:0})+' €'; }
+
+// ══ CAT BARS ══
+function renderCats(id, cats) {
+  const el=document.getElementById(id);
+  if(!Object.keys(cats).length){el.innerHTML='<div class="empty"><div class="empty-icon">📂</div><p>Aucune dépense.</p></div>';return;}
+  const tot=Object.values(cats).reduce((a,b)=>a+b,0);
+  el.innerHTML=Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>`
+    <div class="cat-bar"><div class="cb-lbl">${cat}</div><div class="cb-track"><div class="cb-fill" style="width:${(amt/tot*100).toFixed(1)}%;background:${CAT_COLORS[cat]||'#999'}"></div></div><div class="cb-amt">${fmt(amt)}</div></div>`).join('');
+}
+
+// ══ BANNER ══
+function setBanner(bid,tid,rec,dep) {
+  const b=document.getElementById(bid), t=document.getElementById(tid);
+  const cf=rec-dep;
+  b.className='banner';
+  if(rec===0&&dep===0){b.classList.add('neutral');t.textContent='Aucune donnée saisie.';}
+  else if(cf>0){b.classList.add('positive');t.textContent=`✅ Situation positive : cash flow de ${fmt(cf)} (${((cf/rec)*100).toFixed(1)}% des recettes).`;}
+  else if(cf===0){b.classList.add('neutral');t.textContent='⚖️ À l\'équilibre : recettes = dépenses.';}
+  else{b.classList.add('negative');t.textContent=`⚠️ Déficit de ${fmt(Math.abs(cf))} · Dépenses (${fmt(dep)}) > Recettes (${fmt(rec)}).`;}
+}
+
+// ══ AIRBNB DATA ══
+let airbnbData = null;
+
+async function importAirbnb(file) {
+  if(!file||file.type!=='application/pdf'){showAirStatus('err','❌ Sélectionnez un PDF Airbnb.');return;}
+  showAirStatus('loading','⏳ Lecture du rapport…');
+  try {
+    const ab=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:ab}).promise;
+    let txt='';
+    for(let i=1;i<=pdf.numPages;i++){const p=await pdf.getPage(i);const c=await p.getTextContent();txt+=c.items.map(x=>x.str).join(' ')+'\n';}
+    const d=parseAirbnb(txt);
+    if(!d){showAirStatus('err','❌ Format non reconnu. Utilisez le rapport Airbnb « Rapport de revenus ».');return;}
+    airbnbData=d;
+    renderAirbnb(d);
+    // Frais de service → dépense auto
+    const frais=Math.abs(d.totalFrais);
+    if(frais>0){
+      let deja=false;
+      document.querySelectorAll('#f-dep-tb tr').forEach(tr=>{if((tr.querySelector('input[type="text"]')?.value||'').includes('Airbnb'))deja=true;});
+      if(!deja) addDepRow('f-dep-tb',`${d.annee}-12-31`,'Airbnb','HONORAIRES COMPTABLES',`Frais de service Airbnb ${d.annee}`,frais.toFixed(2));
+    }
+    saveData();
+    showAirStatus('ok',`✅ Importé · ${d.annee} · ${d.logements.length} logements · ${d.totalNuits} nuits · Net : ${fmt(d.totalNet)}`);
+    recalc();
+  } catch(e){console.error(e);showAirStatus('err','❌ Erreur de lecture PDF.');}
+}
+
+function showAirStatus(type,msg){const el=document.getElementById('air-status');el.style.display='flex';el.className='imp-status '+type;el.textContent=msg;}
+
+function parseNum(s){return parseFloat((s||'').replace(/\s/g,'').replace(',','.').replace('€',''))||0;}
+function parseNum2(s){return parseFloat((s||'').replace(/\s/g,'').replace(',','.').replace('€',''))||0;}
+
+function parseOCRText(text, mode) {
+
+function parseAirbnb(txt) {
+  try {
+    const anneeM=txt.match(/(\d{4})\s+Rapport de revenus/);
+    const annee=anneeM?anneeM[1]:new Date().getFullYear();
+    const recM=txt.match(/Revenus\s+([\d\s]+,\d{2})\s*€\s+([-\d\s]+,\d{2})\s*€\s+([-\d\s]+,\d{2})\s*€\s+([\d\s]+,\d{2})\s*€\s+([\d\s]+,\d{2})\s*€/);
+    const totalBrut=recM?parseNum(recM[1]):0;
+    const totalFrais=recM?parseNum(recM[3]):0;
+    const totalNet=recM?parseNum(recM[5]):0;
+    const nuitsM=txt.match(/Nuits réservées\s+([\d\s]+)/);
+    const totalNuits=nuitsM?parseInt(nuitsM[1].replace(/\s/g,'')):0;
+    const logements=[];
+    const sec=txt.match(/Logement\s+Revenus bruts[\s\S]+?(?=Taxes|Types de revenus)/);
+    if(sec){
+      const pat=/([A-Za-z\u00C0-\u024F#][^\d€]{3,80?}?)\s+([\d\s]+,\d{2})\s*€\s+([-\d\s]+,\d{2})\s*€\s+([-\d\s]+,\d{2})\s*€\s+([\d\s]+,\d{2})\s*€\s+([\d\s]+,\d{2})\s*€/g;
+      let m;
+      while((m=pat.exec(sec[0]))!==null){
+        const nom=m[1].trim();
+        if(nom&&!nom.includes('Logement')) logements.push({nom,brut:parseNum(m[2]),regul:parseNum(m[3]),frais:parseNum(m[4]),total:parseNum(m[6]),nuits:null});
+      }
+    }
+    const MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+    const mensuels=[];
+    MOIS.forEach(mois=>{
+      const r=new RegExp(mois+'\\s+([\\d\\s]+,\\d{2})\\s*€\\s+([\\d\\s]+,\\d{2})\\s*€');
+      const m=txt.match(r);
+      if(m) mensuels.push({mois:mois.charAt(0).toUpperCase()+mois.slice(1),brut:parseNum(m[1]),net:parseNum(m[2])});
+    });
+    return{annee,totalBrut,totalFrais,totalNet,totalNuits,logements,mensuels};
+  } catch(e){console.error(e);return null;}
+}
+
+function renderAirbnb(d) {
+  document.getElementById('f-rec').textContent=fmtS(d.totalNet);
+  document.getElementById('f-brut').textContent=fmtS(d.totalBrut);
+  document.getElementById('f-nb').textContent=d.totalNuits;
+  document.getElementById('f-rec-tot').textContent=fmt(d.totalNet);
+  const tb=document.getElementById('f-log');
+  tb.innerHTML='';
+  d.logements.forEach(l=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="font-weight:500">${l.nom}</td><td class="mono">${fmt(l.brut)}</td><td class="mono-red">${l.regul!==0?fmt(l.regul):'—'}</td><td class="mono-red">${fmt(l.frais)}</td><td class="mono-green">${fmt(l.total)}</td><td class="mono-blue">${l.nuits||'—'}</td>`;
+    tb.appendChild(tr);
+  });
+  const tot=document.createElement('tr');
+  tot.style.fontWeight='700';tot.style.borderTop='2px solid var(--border)';
+  tot.innerHTML=`<td>TOTAL</td><td class="mono">${fmt(d.totalBrut)}</td><td></td><td class="mono-red">${fmt(d.totalFrais)}</td><td class="mono-green">${fmt(d.totalNet)}</td><td class="mono-blue">${d.totalNuits}</td>`;
+  tb.appendChild(tot);
+  const tbM=document.getElementById('f-men');
+  tbM.innerHTML='';
+  d.mensuels.forEach(m=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="font-weight:500">${m.mois}</td><td class="mono">${fmt(m.brut)}</td><td class="mono-green">${fmt(m.net)}</td>`;
+    tbM.appendChild(tr);
+  });
+}
+
+// ══ RECALC ══
+let ch1=null,ch2=null;
+
+function recalc() {
+  // Vitry
+  let vRec=0;
+  document.querySelectorAll('#v-loy input[type="number"],#v-prv input[type="number"]').forEach(i=>vRec+=parseFloat(i.value)||0);
+  const vDep=sumTb('v-dep-tb'), vCF=vRec-vDep;
+  document.getElementById('v-rec').textContent=fmtS(vRec);
+  document.getElementById('v-dep').textContent=fmtS(vDep);
+  document.getElementById('v-cf').textContent=fmtS(vCF);
+  document.getElementById('v-nb').textContent=document.querySelectorAll('#v-loc tr').length;
+  document.getElementById('v-dep-tot').textContent=fmt(vDep);
+  const vLoy=sumTb('v-loy'), vPrv=sumTb('v-prv');
+  document.getElementById('v-loy-tot').textContent=fmt(vLoy);
+  document.getElementById('v-prv-tot').textContent=fmt(vPrv);
+  setBanner('v-banner','v-text',vRec,vDep);
+  renderCats('v-cats',catTotals('v-dep-tb'));
+
+  // Ferrieres
+  const fRec=airbnbData?airbnbData.totalNet:0;
+  const fBrut=airbnbData?airbnbData.totalBrut:0;
+  const fNuits=airbnbData?airbnbData.totalNuits:0;
+  const fDep=sumTb('f-dep-tb'), fCF=fRec-fDep;
+  document.getElementById('f-rec').textContent=fmtS(fRec);
+  document.getElementById('f-brut').textContent=fmtS(fBrut);
+  document.getElementById('f-dep').textContent=fmtS(fDep);
+  document.getElementById('f-nb').textContent=fNuits;
+  document.getElementById('f-dep-tot').textContent=fmt(fDep);
+  document.getElementById('f-rec-tot').textContent=fmt(fRec);
+  setBanner('f-banner','f-text',fRec,fDep);
+  renderCats('f-cats',catTotals('f-dep-tb'));
+
+  // Generales
+  const gDep=sumTb('g-dep-tb');
+  document.getElementById('g-dep').textContent=fmtS(gDep);
+  document.getElementById('g-nb').textContent=document.querySelectorAll('#g-dep-tb tr').length;
+  document.getElementById('g-dep-tot').textContent=fmt(gDep);
+  if(gDep>0){document.getElementById('g-banner').className='banner negative';document.getElementById('g-text').textContent=`${fmt(gDep)} de charges générales.`;}
+  else{document.getElementById('g-banner').className='banner neutral';document.getElementById('g-text').textContent='Aucune charge générale saisie.';}
+  renderCats('g-cats',catTotals('g-dep-tb'));
+
+  // Emprunts Vitry
+  const vEmpMens = (parseFloat(document.getElementById('v-emp-mens')?.value)||0) + (parseFloat(document.getElementById('v-emp-ass')?.value)||0);
+  let vEmpInt=0, vEmpAss=0, vEmpCap=0;
+  document.querySelectorAll('#v-ech-tb tr').forEach(tr=>{
+    const nums=tr.querySelectorAll('input[type="number"]');
+    vEmpCap+=parseFloat(nums[0]?.value)||0;
+    vEmpInt+=parseFloat(nums[1]?.value)||0;
+    vEmpAss+=parseFloat(nums[2]?.value)||0;
+  });
+  const vEmpTot = vEmpCap+vEmpInt+vEmpAss || vEmpMens*12;
+  if(document.getElementById('v-emp-tot')) document.getElementById('v-emp-tot').textContent=fmt(vEmpMens);
+
+  // Emprunts Ferrières
+  const fEmpMens = (parseFloat(document.getElementById('f-emp-mens')?.value)||0) + (parseFloat(document.getElementById('f-emp-ass')?.value)||0);
+  let fEmpInt=0, fEmpAss=0, fEmpCap=0;
+  document.querySelectorAll('#f-ech-tb tr').forEach(tr=>{
+    const nums=tr.querySelectorAll('input[type="number"]');
+    fEmpCap+=parseFloat(nums[0]?.value)||0;
+    fEmpInt+=parseFloat(nums[1]?.value)||0;
+    fEmpAss+=parseFloat(nums[2]?.value)||0;
+  });
+  const fEmpTot = fEmpCap+fEmpInt+fEmpAss || fEmpMens*12;
+  if(document.getElementById('f-emp-tot')) document.getElementById('f-emp-tot').textContent=fmt(fEmpMens);
+
+  const empInt = vEmpInt+fEmpInt;
+  const empAss = vEmpAss+fEmpAss;
+  const empCap = vEmpCap+fEmpCap;
+  const empMens = vEmpTot+fEmpTot;
+
+  // Synthese
+  const totRec=vRec+fRec, totDep=vDep+fDep+gDep+empMens, totCF=totRec-totDep;
+  document.getElementById('syn-rec').textContent=fmtS(totRec);
+  document.getElementById('syn-dep').textContent=fmtS(totDep);
+  document.getElementById('syn-cf').textContent=fmtS(totCF);
+  document.getElementById('syn-rdt').textContent=totRec>0?((totCF/totRec)*100).toFixed(1)+'%':'—';
+  document.getElementById('syn-emp').textContent=fmtS(empMens);
+  document.getElementById('syn-int').textContent=fmtS(empInt+empAss);
+  document.getElementById('sm-vr').textContent=fmt(vRec);
+  document.getElementById('sm-vd').textContent=fmt(vDep);
+  document.getElementById('sm-vc').textContent=fmt(vCF);
+  document.getElementById('sm-fr').textContent=fmt(fRec);
+  document.getElementById('sm-fd').textContent=fmt(fDep);
+  document.getElementById('sm-fc').textContent=fmt(fCF);
+  document.getElementById('sm-gd').textContent=fmt(gDep);
+  document.getElementById('sm-gc').textContent=fmt(-gDep);
+  document.getElementById('sm-ed').textContent=fmt(empMens);
+  document.getElementById('sm-ec').textContent=fmt(-empMens);
+  setBanner('syn-banner','syn-text',totRec,totDep);
+  const allC={};
+  [catTotals('v-dep-tb'),catTotals('f-dep-tb'),catTotals('g-dep-tb')].forEach(c=>Object.entries(c).forEach(([k,v])=>allC[k]=(allC[k]||0)+v));
+  renderCats('syn-cats',allC);
+  renderAnalyse(totRec,totDep,totCF,vRec,fRec,vDep,fDep,gDep,empInt,empAss,empCap);
+
+  // Charts
+  if(ch1) ch1.destroy();
+  if(ch2) ch2.destroy();
+  const hasD=vDep+fDep+gDep>0;
+  ch1=new Chart(document.getElementById('chDep'),{type:'doughnut',data:{labels:['Vitry','Ferrières','Générales'],datasets:[{data:hasD?[vDep,fDep,gDep]:[1,1,1],backgroundColor:['rgba(80,70,228,.75)','rgba(0,169,110,.75)','rgba(217,119,6,.75)'],borderColor:['#5046e4','#00a96e','#d97706'],borderWidth:2,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#6b6e82',font:{family:'Outfit',size:11},padding:12,boxWidth:10}},tooltip:{callbacks:{label:ctx=>hasD?` ${ctx.label}: ${fmt(ctx.raw)}`:ctx.label}}},cutout:'62%'}});
+  ch2=new Chart(document.getElementById('chComp'),{type:'bar',data:{labels:['Vitry','Ferrières'],datasets:[{label:'Recettes',data:[vRec,fRec],backgroundColor:'rgba(0,169,110,.7)',borderColor:'#00a96e',borderWidth:1.5,borderRadius:5},{label:'Dépenses',data:[vDep,fDep],backgroundColor:'rgba(232,41,74,.7)',borderColor:'#e8294a',borderWidth:1.5,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#6b6e82',font:{family:'Outfit',size:11},padding:12,boxWidth:10}},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmt(ctx.raw)}`}}},scales:{x:{grid:{color:'rgba(221,224,232,.5)'},ticks:{color:'#6b6e82',font:{family:'Outfit',size:11}}},y:{grid:{color:'rgba(221,224,232,.5)'},ticks:{color:'#6b6e82',font:{family:'DM Mono',size:10},callback:v=>v+' €'}}}}});
+}
+
+// ══ SAVE / LOAD ══
+const SK='immo_v2';
+let saveTimer=null;
+
+function saveData() {
+  function collectTb(id){
+    const rows=[];
+    document.querySelectorAll(`#${id} tr`).forEach(tr=>{
+      const vals=[];
+      tr.querySelectorAll('input:not([type="file"]),select').forEach(i=>vals.push(i.value));
+      if(vals.length) rows.push({vals, pj: JSON.parse(tr.dataset.pj||'[]')});
+    });
+    return rows;
+  }
+  const empFields = {};
+  ['v-emp-banque','v-emp-capital','v-emp-taux','v-emp-duree','v-emp-mens','v-emp-ass','f-emp-banque','f-emp-capital','f-emp-taux','f-emp-duree','f-emp-mens','f-emp-ass'].forEach(id=>{ const el=document.getElementById(id); if(el) empFields[id]=el.value; });
+  const data={vLoc:collectTb('v-loc'),vLoy:collectTb('v-loy'),vPrv:collectTb('v-prv'),vDep:collectTb('v-dep-tb'),vEch:collectTb('v-ech-tb'),fDep:collectTb('f-dep-tb'),fEch:collectTb('f-ech-tb'),gDep:collectTb('g-dep-tb'),airbnb:airbnbData||null,empFields};
+  localStorage.setItem(SK,JSON.stringify(data));
+  const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+function loadData() {
+  const raw=localStorage.getItem(SK);
+  if(!raw) return;
+  try {
+    const d=JSON.parse(raw);
+    function restoreTb(id,rows,addFn,...args){
+      if(!rows) return;
+      rows.forEach(r=>{
+        addFn(...args.map(()=>undefined));
+        const el=document.querySelector(`#${id} tr:last-child`);
+        const inputs=el.querySelectorAll('input,select');
+        r.forEach((v,i)=>{if(inputs[i])inputs[i].value=v;});
+      });
+    }
+    function restoreRows(rows, addFn, tbodyId) {
+      if(!rows) return;
+      rows.forEach(r=>{
+        const vals = r.vals || r; // compat ancienne sauvegarde
+        const pj = r.pj || [];
+        addFn();
+        const tr=document.querySelector(`#${tbodyId} tr:last-child`);
+        tr.querySelectorAll('input:not([type="file"]),select').forEach((i,idx)=>{if(vals[idx]!==undefined)i.value=vals[idx];});
+        if(pj.length){
+          tr.dataset.pj=JSON.stringify(pj);
+          const cell=tr.querySelector('.pj-cell');
+          if(cell) pj.forEach(f=>addPJThumb(cell,f,tr));
+        }
+      });
+    }
+    if(d.vLoc) d.vLoc.forEach(r=>{addLocRow();const tr=document.querySelector('#v-loc tr:last-child');const vals=r.vals||r;tr.querySelectorAll('input:not([type="file"]),select').forEach((i,idx)=>{if(vals[idx]!==undefined)i.value=vals[idx];});});
+    if(d.vLoy) restoreRows(d.vLoy, addLoyRow, 'v-loy');
+    if(d.vPrv) restoreRows(d.vPrv, addPrvRow, 'v-prv');
+    if(d.vDep) restoreRows(d.vDep, ()=>addDepRow('v-dep-tb'), 'v-dep-tb');
+    if(d.fDep) restoreRows(d.fDep, ()=>addDepRow('f-dep-tb'), 'f-dep-tb');
+    if(d.gDep) restoreRows(d.gDep, ()=>addDepRow('g-dep-tb'), 'g-dep-tb');
+    if(d.airbnb){airbnbData=d.airbnb;renderAirbnb(d.airbnb);showAirStatus('ok',`✅ Rapport Airbnb ${d.airbnb.annee} chargé · Net : ${fmt(d.airbnb.totalNet)}`);}
+    if(d.empFields){Object.entries(d.empFields).forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v;});}
+    if(d.vEch) restoreRows(d.vEch, ()=>addEchRow('v-ech-tb'), 'v-ech-tb');
+    if(d.fEch) restoreRows(d.fEch, ()=>addEchRow('f-ech-tb'), 'f-ech-tb');
+    recalc();
+  } catch(e){console.error(e);}
+}
+
+function clearAll() {
+  if(!confirm('Effacer toutes les données ? Action irréversible.')) return;
+  localStorage.removeItem(SK);
+  ['v-loc','v-loy','v-prv','v-dep-tb','f-dep-tb','g-dep-tb'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='';});
+  airbnbData=null;
+  document.getElementById('air-status').style.display='none';
+  document.getElementById('f-log').innerHTML='<tr><td colspan="6"><div class="empty"><div class="empty-icon">📄</div><p>Importez le rapport Airbnb PDF</p></div></td></tr>';
+  document.getElementById('f-men').innerHTML='<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--dim)">Importez le rapport PDF</td></tr>';
+  recalc();
+}
+
+document.addEventListener('change', ()=>{clearTimeout(saveTimer);saveTimer=setTimeout(saveData,600);});
+document.addEventListener('input', ()=>{clearTimeout(saveTimer);saveTimer=setTimeout(saveData,600);});
+
+// ══ PLAN COMPTABLE ══
+let PC = {
+  loyers:{n:'7061',l:'Loyers des logements'},provisions:{n:'7062',l:'Provisions sur charges'},
+  airbnb_rec:{n:'7068',l:'Recettes Airbnb'},airbnb_frais:{n:'6226',l:'Commissions Airbnb'},
+  charges:{n:'6060',l:'Charges diverses'},assurance:{n:'6160',l:"Primes d'assurance"},
+  honoraires:{n:'6226',l:'Honoraires comptables'},emprunt:{n:'1641',l:'Emprunt immobilier'},
+  interets:{n:'6615',l:'Intérêts des emprunts'},taxe_fonc:{n:'6350',l:'Taxes foncières'},
+  cfe:{n:'6351',l:'CFE'},copropriete:{n:'6132',l:'Charges de copropriété'},
+  mobilier:{n:'2184',l:'Mobilier'},client:{n:'4111',l:'Clients / Locataires'},
+  airbnb_t:{n:'4118',l:'Airbnb - transit'},banque:{n:'108',l:'Compte exploitant'},
+  fournisseur:{n:'4011',l:'Fournisseurs'},autre:{n:'6288',l:'Autres charges'},
+};
+const PC_LABELS={loyers:'Loyers',provisions:'Provisions charges',airbnb_rec:'Recettes Airbnb (produit)',airbnb_frais:'Frais Airbnb (charge)',charges:'Charges diverses',assurance:'Assurance',honoraires:'Honoraires',emprunt:'Emprunt',interets:'Intérêts',taxe_fonc:'Taxe foncière',cfe:'CFE',copropriete:'Copropriété',mobilier:'Mobilier',client:'Client/Locataire',airbnb_t:'Airbnb transit',banque:'Banque',fournisseur:'Fournisseur',autre:'Autres charges'};
+
+function renderPC() {
+  document.getElementById('pc-grid').innerHTML=Object.entries(PC).map(([k,c])=>`
+    <div class="cr"><label>${PC_LABELS[k]||k}</label>
+    <input class="cn" value="${c.n}" onchange="PC['${k}'].n=this.value" title="N° compte">
+    <input class="cl" value="${c.l}" onchange="PC['${k}'].l=this.value" title="Libellé"></div>`).join('');
+}
+
+async function importPC(file) {
+  if(!file) return;
+  const el=document.getElementById('pc-status');
+  el.style.display='flex';el.style.background='rgba(80,70,228,.07)';el.style.color='var(--blue)';el.style.border='1px solid rgba(80,70,228,.2)';el.style.borderRadius='8px';el.style.alignItems='center';el.textContent='⏳ Lecture…';
+  try {
+    const ab=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:ab}).promise;
+    let txt='';
+    for(let i=1;i<=pdf.numPages;i++){const p=await pdf.getPage(i);const c=await p.getTextContent();txt+=c.items.map(x=>x.str).join(' ')+'\n';}
+    const r=/\b(\d{4,6})\s+([A-Za-zÀ-ÿ][^\d\n]{5,80})/g;
+    let m,cnt=0,found={};
+    while((m=r.exec(txt))!==null){found[m[1]]=m[2].trim();cnt++;}
+    Object.entries(PC).forEach(([k,c])=>{if(found[c.n])PC[k].l=found[c.n];});
+    renderPC();
+    el.style.background='rgba(0,169,110,.07)';el.style.color='var(--green)';el.style.borderColor='rgba(0,169,110,.2)';
+    el.textContent=`✅ ${cnt} comptes détectés. Libellés mis à jour.`;
+  } catch(e){el.style.background='rgba(232,41,74,.07)';el.style.color='var(--red)';el.textContent='❌ Erreur lecture PDF.';}
+}
+
+function catToPC(cat){
+  const map = {
+    '6061 - Fournitures non stockables (eau, énergie)': 'charges',
+    '6063 - Fournitures entretien et petit équipement': 'charges',
+    '6064 - Fournitures administratives': 'charges',
+    '6068 - Autres matières et fournitures': 'charges',
+    '6111 - Sous-traitance générale': 'charges',
+    '6132 - Charges de copropriété': 'copropriete',
+    '6135 - Locations mobilières': 'charges',
+    '6155 - Entretien et réparations immobiliers': 'charges',
+    '6156 - Entretien et réparations mobiliers': 'charges',
+    '6160 - Primes d assurance': 'assurance',
+    '6226 - Commissions et courtages (Airbnb, agences)': 'airbnb_frais',
+    '6228 - Honoraires comptables et juridiques': 'honoraires',
+    '6261 - Téléphonie et internet': 'charges',
+    '6270 - Frais bancaires': 'charges',
+    '6350 - Taxe foncière': 'taxe_fonc',
+    '6351 - CFE': 'cfe',
+    '6354 - Taxe ordures ménagères': 'charges',
+    '6615 - Intérêts des emprunts': 'interets',
+    '6616 - Intérêts bancaires': 'interets',
+    '6811 - Dotations amortissements corporels': 'charges',
+    '2181 - Agencements et aménagements': 'mobilier',
+    '2184 - Mobilier': 'mobilier',
+    '2183 - Matériel bureau et informatique': 'mobilier',
+    '6288 - Autres charges diverses': 'autre',
+  };
+  return map[cat] || 'autre';
+}
+
+// ══ GÉNÉRATION ÉCRITURES ══
+let ecData=[], pNum=1;
+
+function genEcritures() {
+  ecData=[]; pNum=1;
+  const annee=new Date().getFullYear();
+  const p=()=>`ECR-${String(pNum++).padStart(4,'0')}`;
+
+  // Loyers
+  document.querySelectorAll('#v-loy tr').forEach(tr=>{
+    const i=tr.querySelectorAll('input');
+    const amt=parseFloat(i[4]?.value)||0; if(!amt) return;
+    const date=i[0]?.value?i[0].value+'-01':`${annee}-01-01`;
+    const lib=`Loyer ${i[2]?.value} - ${i[1]?.value}`;
+    const id=p();
+    ecData.push({id,date,j:'VT',c:PC.client.n,cl:PC.client.l,lib,d:amt,cr:0});
+    ecData.push({id,date,j:'VT',c:PC.loyers.n,cl:PC.loyers.l,lib,d:0,cr:amt});
+  });
+  // Provisions
+  document.querySelectorAll('#v-prv tr').forEach(tr=>{
+    const i=tr.querySelectorAll('input');
+    const amt=parseFloat(i[4]?.value)||0; if(!amt) return;
+    const date=i[0]?.value?i[0].value+'-01':`${annee}-01-01`;
+    const lib=`Provision ${i[2]?.value} - ${i[1]?.value}`;
+    const id=p();
+    ecData.push({id,date,j:'VT',c:PC.client.n,cl:PC.client.l,lib,d:amt,cr:0});
+    ecData.push({id,date,j:'VT',c:PC.provisions.n,cl:PC.provisions.l,lib,d:0,cr:amt});
+  });
+  // Airbnb recettes
+  if(airbnbData){
+    const MOIS_IDX={Janvier:1,Février:2,Mars:3,Avril:4,Mai:5,Juin:6,Juillet:7,Août:8,Septembre:9,Octobre:10,Novembre:11,Décembre:12};
+    airbnbData.mensuels.forEach(m=>{
+      if(!m.brut) return;
+      const mn=String(MOIS_IDX[m.mois]||1).padStart(2,'0');
+      const date=`${airbnbData.annee}-${mn}-01`;
+      const lib=`Recettes Airbnb ${m.mois} ${airbnbData.annee}`;
+      const id=p();
+      ecData.push({id,date,j:'FB',c:PC.airbnb_t.n,cl:PC.airbnb_t.l,lib,d:m.brut,cr:0});
+      ecData.push({id,date,j:'FB',c:PC.airbnb_rec.n,cl:PC.airbnb_rec.l,lib,d:0,cr:m.brut});
+    });
+    const frais=Math.abs(airbnbData.totalFrais);
+    if(frais>0){
+      const id=p();
+      ecData.push({id,date:`${airbnbData.annee}-12-31`,j:'OD',c:PC.airbnb_frais.n,cl:PC.airbnb_frais.l,lib:`Frais Airbnb ${airbnbData.annee}`,d:frais,cr:0});
+      ecData.push({id,date:`${airbnbData.annee}-12-31`,j:'OD',c:PC.airbnb_t.n,cl:PC.airbnb_t.l,lib:`Frais Airbnb ${airbnbData.annee}`,d:0,cr:frais});
+    }
+  }
+  // Dépenses
+  [['v-dep-tb','VT'],['f-dep-tb','FB'],['g-dep-tb','OD']].forEach(([tid,j])=>{
+    document.querySelectorAll(`#${tid} tr`).forEach(tr=>{
+      const inputs=tr.querySelectorAll('input');
+      const sel=tr.querySelector('select');
+      const amt=parseFloat(inputs[inputs.length-1]?.value)||0; if(!amt) return;
+      const date=inputs[0]?.value||`${annee}-01-01`;
+      const fourn=inputs[1]?.value||'Fournisseur';
+      const cat=sel?.value||'AUTRE';
+      const pk=catToPC(cat);
+      const lib=`${cat} - ${fourn}`;
+      const id=p();
+      ecData.push({id,date,j,c:PC[pk].n,cl:PC[pk].l,lib,d:amt,cr:0});
+      ecData.push({id,date,j,c:PC.fournisseur.n,cl:PC.fournisseur.l,lib,d:0,cr:amt});
+    });
+  });
+
+  const tb=document.getElementById('ec-tbody');
+  tb.innerHTML='';
+  if(!ecData.length){document.getElementById('ec-status').textContent='Aucune donnée à générer.';document.getElementById('ec-table').style.display='none';return;}
+  ecData.forEach(e=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${e.id}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${e.date}</td>
+      <td><span style="background:rgba(80,70,228,.1);color:var(--blue);padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700">${e.j}</span></td>
+      <td style="font-family:'DM Mono',monospace;font-weight:700;color:var(--blue)">${e.c}</td>
+      <td style="font-size:12px;color:var(--muted)">${e.cl}</td>
+      <td style="font-size:12px">${e.lib}</td>
+      <td style="${e.d?'color:var(--red);font-family:DM Mono,monospace;text-align:right;font-weight:600':''}">${e.d?fmt(e.d):''}</td>
+      <td style="${e.cr?'color:var(--green);font-family:DM Mono,monospace;text-align:right;font-weight:600':''}">${e.cr?fmt(e.cr):''}</td>`;
+    tb.appendChild(tr);
+  });
+  document.getElementById('ec-status').textContent=`${ecData.length} lignes · ${ecData.length/2|0} écritures générées`;
+  document.getElementById('ec-table').style.display='table';
+}
+
+function exportFEC() {
+  if(!ecData.length){alert('Générez d\'abord les écritures.');return;}
+  const yr=new Date().getFullYear();
+  const hdr='JournalCode|JournalLib|EcritureNum|EcritureDate|CompteNum|CompteLib|CompAuxNum|CompAuxLib|PieceRef|PieceDate|EcritureLib|Debit|Credit|EcritureLet|DateLet|ValidDate|Montantdevise|Idevise\n';
+  const lines=ecData.map(e=>{
+    const ds=e.date.replace(/-/g,'');
+    return `${e.j}|Journal ${e.j}|${e.id}|${ds}|${e.c}|${e.cl}|||${e.id}|${ds}|${e.lib}|${e.d.toFixed(2).replace('.',',')}|${e.cr.toFixed(2).replace('.',',')}||||0,00|EUR`;
+  }).join('\n');
+  dl('\uFEFF'+hdr+lines,`FEC_IMMO_${yr}.txt`,'text/plain');
+}
+
+function exportCSV() {
+  if(!ecData.length){alert('Générez d\'abord les écritures.');return;}
+  const yr=new Date().getFullYear();
+  const hdr='N° Pièce;Date;Journal;N° Compte;Libellé compte;Libellé écriture;Débit (€);Crédit (€)\n';
+  const lines=ecData.map(e=>`${e.id};${e.date};${e.j};${e.c};"${e.cl}";"${e.lib}";${e.d?e.d.toFixed(2).replace('.',','):''};${e.cr?e.cr.toFixed(2).replace('.',','): ''}`).join('\n');
+  dl('\uFEFF'+hdr+lines,`JOURNAL_IMMO_${yr}.csv`,'text/csv');
+}
+
+function dl(content,filename,type){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type:type+';charset=utf-8'}));
+  a.download=filename;a.click();
+}
+
+// ══ PIÈCES JOINTES ══
+function renderPJThumbs(pjArr) { return ''; } // placeholders remplacés par addPJThumb
+
+function addPJFiles(input) {
+  const tr = input.closest('tr');
+  const cell = input.closest('.pj-cell');
+  const files = Array.from(input.files);
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const data = { name: file.name, type: file.type, b64: e.target.result };
+      if (!tr.dataset.pj) tr.dataset.pj = '[]';
+      const arr = JSON.parse(tr.dataset.pj);
+      arr.push(data);
+      tr.dataset.pj = JSON.stringify(arr);
+      addPJThumb(cell, data, tr);
+      saveData();
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function addPJThumb(cell, data, tr) {
+  const label = cell.querySelector('label.pj-btn');
+  const span = document.createElement('span');
+  span.className = 'pj-thumb';
+  const icon = data.type.startsWith('image') ? '🖼️' : '📄';
+  span.innerHTML = `${icon} ${data.name.length > 14 ? data.name.slice(0,12)+'…' : data.name} <span style="color:var(--red);margin-left:2px">✕</span>`;
+  span.querySelector('span').onclick = e => {
+    e.stopPropagation();
+    const arr = JSON.parse(tr.dataset.pj || '[]');
+    const idx = arr.findIndex(f => f.name === data.name && f.b64 === data.b64);
+    if (idx > -1) arr.splice(idx, 1);
+    tr.dataset.pj = JSON.stringify(arr);
+    span.remove();
+    saveData();
+  };
+  span.onclick = () => openPJ(data);
+  cell.insertBefore(span, label);
+}
+
+function openPJ(data) {
+  const modal = document.getElementById('pj-modal');
+  const body = document.getElementById('pj-modal-body');
+  if (data.type.startsWith('image')) {
+    body.innerHTML = `<img src="${data.b64}" alt="${data.name}"><p style="text-align:center;font-size:12px;color:var(--muted);margin-top:8px">${data.name}</p>`;
+  } else {
+    body.innerHTML = `<iframe src="${data.b64}"></iframe><p style="text-align:center;font-size:12px;color:var(--muted);margin-top:8px">${data.name}</p>`;
+  }
+  modal.classList.add('open');
+}
+
+function closePJ() {
+  document.getElementById('pj-modal').classList.remove('open');
+  document.getElementById('pj-modal-body').innerHTML = '';
+}
+
+document.getElementById('pj-modal').addEventListener('click', e => { if(e.target===document.getElementById('pj-modal')) closePJ(); });
+
+// ══ OCR SYSTÈME ══
+let ocrMode = 'depense';
+let ocrTargetTable = 'v-dep-tb';
+let ocrResult = null;
+let ocrFileData = null;
+
+function openOCR(mode, tableId) {
+  ocrMode = mode;
+  ocrTargetTable = tableId || 'v-dep-tb';
+  ocrResult = null;
+  ocrFileData = null;
+  // Reset UI
+  document.getElementById('ocr-preview').style.display = 'none';
+  document.getElementById('ocr-preview').innerHTML = '';
+  document.getElementById('ocr-status').style.display = 'none';
+  document.getElementById('ocr-fields-wrap').style.display = 'none';
+  document.getElementById('ocr-fields').innerHTML = '';
+  document.getElementById('ocr-confirm-btn').style.display = 'none';
+  document.getElementById('ocr-file-input').value = '';
+  const descs = {
+    depense: 'Importez une facture, un ticket ou un reçu — Claude extrait la date, le fournisseur, le montant et suggère la catégorie.',
+    loyer: 'Importez une quittance de loyer — Claude extrait le locataire, le montant et la période.',
+    provision: 'Importez un document de charges — Claude extrait le montant et la période.',
+    emprunt: 'Importez un tableau d\'amortissement ou un relevé bancaire — l\'OCR extrait automatiquement le capital, les intérêts et l\'assurance emprunteur.'
+  };
+  document.getElementById('ocr-modal-desc').textContent = descs[mode] || descs.depense;
+  document.getElementById('ocr-modal').style.display = 'flex';
+}
+
+function closeOCR() {
+  document.getElementById('ocr-modal').style.display = 'none';
+}
+
+async function handleOCRFile(file) {
+  if (!file) return;
+  // Prévisualisation
+  const prev = document.getElementById('ocr-preview');
+  prev.style.display = 'flex';
+  if (file.type.startsWith('image/')) {
+    const url = URL.createObjectURL(file);
+    prev.innerHTML = `<img src="${url}" alt="Aperçu">`;
+  } else {
+    prev.innerHTML = `<div style="padding:20px;font-size:13px;color:var(--muted)">📄 ${file.name}</div>`;
+  }
+  // Convertir en base64
+  const b64 = await new Promise(res => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.readAsDataURL(file);
+  });
+  ocrFileData = { name: file.name, type: file.type, b64 };
+  // Lancer l'analyse
+  await analyseOCR(b64, file.type, file.name);
+}
+
+async function analyseOCR(b64Data, mimeType, filename) {
+  const status = document.getElementById('ocr-status');
+  status.style.display = 'block';
+  status.style.color = 'var(--blue)';
+  status.innerHTML = `<span class="ocr-spinner"></span> Lecture du document…`;
+  document.getElementById('ocr-fields-wrap').style.display = 'none';
+  document.getElementById('ocr-confirm-btn').style.display = 'none';
+
+  try {
+    let text = '';
+
+    if (mimeType === 'application/pdf') {
+      // ── PDF vectoriel : extraction directe du texte via PDF.js ──
+      status.innerHTML = `<span class="ocr-spinner"></span> Extraction du texte PDF…`;
+      const pureB64 = b64Data.split(',')[1];
+      const binary = atob(pureB64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        // Reconstituer le texte en respectant les positions X/Y pour les tableaux
+        const items = content.items;
+        let lastY = null;
+        items.forEach(item => {
+          if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) text += '\n';
+          text += item.str + ' ';
+          lastY = item.transform[5];
+        });
+        text += '\n';
+      }
+      // Si le PDF ne contient pas de texte extractible → fallback Tesseract
+      if (text.replace(/\s/g,'').length < 50) {
+        status.innerHTML = `<span class="ocr-spinner"></span> PDF scanné détecté, OCR en cours…`;
+        text = await runTesseract(b64Data, mimeType, status);
+      }
+    } else {
+      // ── Image : Tesseract ──
+      text = await runTesseract(b64Data, mimeType, status);
+    }
+
+    status.innerHTML = `<span class="ocr-spinner"></span> Analyse des données…`;
+    const parsed = parseOCRText(text, ocrMode);
+    status.style.display = 'none';
+    renderOCRFields(parsed);
+
+  } catch(e) {
+    console.error(e);
+    status.innerHTML = `❌ Erreur : ${e.message}`;
+    status.style.color = 'var(--red)';
+  }
+}
+
+async function runTesseract(b64Data, mimeType, status) {
+  if (typeof Tesseract === 'undefined') {
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  let imageUrl = b64Data;
+  if (mimeType === 'application/pdf') {
+    const pureB64 = b64Data.split(',')[1];
+    const binary = atob(pureB64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 2.5 });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    imageUrl = canvas.toDataURL('image/png');
+  }
+  const { data: { text } } = await Tesseract.recognize(imageUrl, 'fra', {
+    logger: m => { if (m.status==='recognizing text' && status) status.innerHTML = `<span class="ocr-spinner"></span> OCR… ${Math.round(m.progress*100)}%`; }
+  });
+  return text;
+}(text, mode) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 1);
+  const full = lines.join(' ');
+
+  // ── Extraction date ──
+  let date = '';
+  const dateM = full.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+  if (dateM) {
+    const y = dateM[3].length === 2 ? '20' + dateM[3] : dateM[3];
+    date = `${y}-${dateM[2].padStart(2,'0')}-${dateM[1].padStart(2,'0')}`;
+  }
+
+  // ── Extraction montant ──
+  const amtMatches = [...full.matchAll(/(\d{1,6}[,\.]\d{2})\s*€?/g)].map(m => parseFloat(m[1].replace(',','.')));
+  const montant = amtMatches.length ? Math.max(...amtMatches) : null;
+  const montantHT = amtMatches.length > 1 ? Math.min(...amtMatches.filter(a => a !== montant)) : null;
+  const tva = montant && montantHT ? Math.round((montant - montantHT) * 100) / 100 : null;
+
+  // ── Extraction période ──
+  const MOIS_FR = {janvier:'01',février:'02',fevrier:'02',mars:'03',avril:'04',mai:'05',juin:'06',juillet:'07',août:'08',aout:'08',septembre:'09',octobre:'10',novembre:'11',décembre:'12',decembre:'12'};
+  let periode = '';
+  const moisM = full.toLowerCase().match(/(janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre)\s*(\d{4})?/i);
+  if (moisM) {
+    const annee = moisM[2] || new Date().getFullYear();
+    periode = `${annee}-${MOIS_FR[moisM[1].toLowerCase()] || '01'}`;
+  } else if (date) {
+    periode = date.slice(0, 7);
+  }
+
+  // ── Extraction fournisseur (première ligne significative) ──
+  let fournisseur = '';
+  for (const line of lines) {
+    if (line.length > 3 && !/^\d/.test(line) && !/^(date|facture|total|tva|ht|ttc|montant|quittance|loyer)/i.test(line)) {
+      fournisseur = line.replace(/[^a-zA-ZÀ-ÿ0-9\s\-\.]/g, '').trim().slice(0, 40);
+      if (fournisseur.length > 2) break;
+    }
+  }
+
+  // ── Extraction locataire ──
+  let locataire = '';
+  const locM = full.match(/(?:locataire|preneur|titulaire)[:\s]+([A-ZÀÂÄÉÈÊËÏÎÔÖÙÛÜ][a-zàâäéèêëïîôöùûü]+(?:\s+[A-ZÀÂÄÉÈÊËÏÎÔÖÙÛÜ][a-zàâäéèêëïîôöùûü]+)*)/i);
+  if (locM) locataire = locM[1];
+
+  // ── Catégorie auto (comptes PCG BIC LMNP) ──
+  const txt = full.toLowerCase();
+  let categorie = '6288 - Autres charges diverses';
+  if (/assurance|garantie|mutuelle/.test(txt)) categorie = '6160 - Primes d assurance';
+  else if (/eau|compteur d.eau|consommation eau/.test(txt)) categorie = '6061 - Fournitures non stockables (eau, énergie)';
+  else if (/gaz|chauffage|engie|totalenergies/.test(txt)) categorie = '6061 - Fournitures non stockables (eau, énergie)';
+  else if (/electricit|électric|enedis|edf|courant/.test(txt)) categorie = '6061 - Fournitures non stockables (eau, énergie)';
+  else if (/téléphone|internet|sfr|orange|free|bouygues|fibre|mobile/.test(txt)) categorie = '6261 - Téléphonie et internet';
+  else if (/copropri|syndic|gardien/.test(txt)) categorie = '6132 - Charges de copropriété';
+  else if (/taxe fonci/.test(txt)) categorie = '6350 - Taxe foncière';
+  else if (/ordures|déchets|om\b/.test(txt)) categorie = '6354 - Taxe ordures ménagères';
+  else if (/cfe|cotisation foncière/.test(txt)) categorie = '6351 - CFE';
+  else if (/intérêt|interest/.test(txt)) categorie = '6615 - Intérêts des emprunts';
+  else if (/frais bancaire|agios|commission bancaire/.test(txt)) categorie = '6270 - Frais bancaires';
+  else if (/expert.comptable|honoraire|comptable|juridique|avocat|notaire/.test(txt)) categorie = '6228 - Honoraires comptables et juridiques';
+  else if (/airbnb|booking|commission|courtage|agence/.test(txt)) categorie = '6226 - Commissions et courtages (Airbnb, agences)';
+  else if (/travaux|répar|entretien|plombier|électricien|maçon|peintur|carrel/.test(txt)) categorie = '6155 - Entretien et réparations immobiliers';
+  else if (/meuble|mobilier|canapé|literie|armoire|table|chaise/.test(txt)) categorie = '2184 - Mobilier';
+  else if (/agenc|aménag|cuisine|salle de bain/.test(txt)) categorie = '2181 - Agencements et aménagements';
+  else if (/ordinateur|imprimante|informatique|logiciel|matériel bureau/.test(txt)) categorie = '2183 - Matériel bureau et informatique';
+  else if (/fourniture|consommable|produit entretien|nettoyage/.test(txt)) categorie = '6063 - Fournitures entretien et petit équipement';
+  else if (/sous.traitance|prestataire|entreprise/.test(txt)) categorie = '6111 - Sous-traitance générale';
+
+  // ── Confiance ──
+  const confiance = montant && (fournisseur || locataire) ? 'haute' : montant || fournisseur ? 'moyenne' : 'faible';
+
+  if (mode === 'depense') {
+    return { date, fournisseur, montant_ttc: montant, montant_ht: montantHT, tva, description: lines.slice(0,3).join(' ').slice(0,60), categorie, confiance };
+  } else if (mode === 'loyer') {
+    const loyerM = full.match(/(?:loyer|mensualit)[^:]*[:\s]+(\d{1,6}[,\.]\d{2})/i);
+    const chargesM = full.match(/(?:charges|provision)[^:]*[:\s]+(\d{1,6}[,\.]\d{2})/i);
+    const loyer_hc = loyerM ? parseFloat(loyerM[1].replace(',','.')) : (amtMatches.length > 1 ? Math.min(...amtMatches) : null);
+    const charges = chargesM ? parseFloat(chargesM[1].replace(',','.')) : null;
+    return { periode, locataire, appartement: '', loyer_hc, charges, total: montant, confiance };
+  } else if (mode === 'emprunt') {
+    // ── Parser tableau d'amortissement bancaire français ──
+    // Stratégie 1 : chercher les libellés explicites
+    let capital = null, interets = null, assurance = null, mens = null, solde = null, banque = '';
+
+    // Banque
+    const banqueM = full.match(/(?:crédit\s*agricole|bnp\s*paribas?|société\s*générale|caisse\s*d.épargne|lcl|boursorama|hello\s*bank|crédit\s*mutuel|cic|banque\s*populaire|bpce|la\s*banque\s*postale|ing\b|hsbc|cetelem|sofinco|cofidis|ca\s*consumer)/i);
+    banque = banqueM ? banqueM[0] : '';
+
+    // Chercher les libellés classiques
+    const pCapital = [
+      /capital\s*(?:remboursé|amorti|restant\s*du\s*prêt|de\s*l.échéance)[^\d]*([\d\s]+[,\.]\d{2})/i,
+      /part\s*(?:en\s*)?capital[^\d]*([\d\s]+[,\.]\d{2})/i,
+      /amortissement[^\d]*([\d\s]+[,\.]\d{2})/i,
+      /principal[^\d]*([\d\s]+[,\.]\d{2})/i,
+    ];
+    const pInterets = [
+      /intér[eê]ts?\s*(?:du\s*prêt|courus|payés|de\s*l.échéance)?[^\d]*([\d\s]+[,\.]\d{2})/i,
+      /int[eé]r[eê]ts?[^\d]*([\d\s]+[,\.]\d{2})/i,
+      /frais\s*financiers[^\d]*([\d\s]+[,\.]\d{2})/i,
+    ];
+    const pAssurance = [
+      /assurance[^\d]*([\d\s]+[,\.]\d{2})/i,
+      /(?:ADI|adi)[^\d]*([\d\s]+[,\.]\d{2})/i,
+      /cotisation[^\d]*([\d\s]+[,\.]\d{2})/i,
+      /prime[^\d]*([\d\s]+[,\.]\d{2})/i,
+    ];
+    const pMens = [
+      /(?:mensualité|échéance|montant\s*de\s*l.échéance|total\s*(?:à\s*payer|échéance))[^\d]*([\d\s]+[,\.]\d{2})/i,
+      /(?:prélèvement|débit)[^\d]*([\d\s]+[,\.]\d{2})/i,
+    ];
+    const pSolde = [
+      /capital\s*restant\s*(?:dû|due?)[^\d]*([\d\s]+[,\.]\d{2})/i,
+      /(?:solde|encours|capital\s*dû)[^\d]*([\d\s]+[,\.]\d{2})/i,
+    ];
+
+    for (const p of pCapital) { const m=full.match(p); if(m){capital=parseNum2(m[1]);break;} }
+    for (const p of pInterets) { const m=full.match(p); if(m){interets=parseNum2(m[1]);break;} }
+    for (const p of pAssurance) { const m=full.match(p); if(m){assurance=parseNum2(m[1]);break;} }
+    for (const p of pMens) { const m=full.match(p); if(m){mens=parseNum2(m[1]);break;} }
+    for (const p of pSolde) { const m=full.match(p); if(m){solde=parseNum2(m[1]);break;} }
+
+    // Stratégie 2 : si pas de libellés trouvés, analyser les lignes numériques
+    // Un tableau d'amort a typiquement N lignes avec 4-6 colonnes numériques
+    if (!capital && !interets) {
+      // Extraire toutes les lignes avec au moins 3 montants (ex: "450,23  123,45  45,00  618,68")
+      const numLines = lines.filter(l => {
+        const nums = l.match(/\d+[,\.]\d{2}/g);
+        return nums && nums.length >= 3;
+      });
+
+      if (numLines.length > 0) {
+        // Prendre la première ligne de données (ignorer l'en-tête)
+        // Format typique colonne : [date?] [num?] [capital] [intérêts] [assurance] [total] [solde]
+        const firstLine = numLines[0];
+        const cols = (firstLine.match(/[\d\s]+[,\.]\d{2}/g) || [])
+          .map(s => parseNum2(s))
+          .filter(n => n > 0 && n < 100000);
+
+        if (cols.length >= 3) {
+          // Heuristique : trier pour identifier
+          // Capital = généralement le plus petit ou 2ème
+          // Intérêts = souvent le 2ème ou 3ème
+          // Assurance = souvent le plus petit
+          // Total = la somme des autres
+          const sorted = [...cols].sort((a,b)=>a-b);
+
+          // Trouver la mensualité = valeur qui ≈ somme des autres
+          let bestMens = null, bestCap = null, bestInt = null, bestAss = null;
+          for (let i=0; i<cols.length; i++) {
+            const rest = cols.filter((_,j)=>j!==i);
+            const sum = rest.reduce((s,v)=>s+v,0);
+            if (Math.abs(cols[i] - sum) < 1.0) {
+              bestMens = cols[i];
+              // Les autres sont capital, intérêts, assurance
+              const sub = rest.sort((a,b)=>b-a);
+              bestInt = sub[0];   // intérêts = plus grand des sous-composantes
+              bestCap = sub[1];   // capital = 2ème
+              bestAss = sub[2] || null; // assurance = plus petit (optionnel)
+              break;
+            }
+          }
+          if (bestMens) {
+            capital = bestCap;
+            interets = bestInt;
+            assurance = bestAss;
+            mens = bestMens;
+          } else {
+            // Fallback : assignation positionnelle
+            capital = cols[0];
+            interets = cols[1];
+            assurance = cols.length >= 3 ? cols[2] : null;
+            mens = cols[cols.length-1];
+          }
+        }
+      }
+    }
+
+    const confiance = (capital && interets) ? 'haute' : (capital || interets || mens) ? 'moyenne' : 'faible';
+    return {
+      periode,
+      banque,
+      capital: capital ? capital.toFixed(2) : '',
+      interets: interets ? interets.toFixed(2) : '',
+      assurance: assurance ? assurance.toFixed(2) : '',
+      mensualite: mens ? mens.toFixed(2) : '',
+      solde: solde ? solde.toFixed(2) : '',
+      confiance
+    };
+  } else {
+    return { periode, locataire, montant, description: lines.slice(0,2).join(' ').slice(0,60), confiance };
+  }
+}
+
+function renderOCRFields(data) {
+  const wrap = document.getElementById('ocr-fields-wrap');
+  const fieldsDiv = document.getElementById('ocr-fields');
+  const conf = data.confiance || 'moyenne';
+  const confEl = document.getElementById('ocr-conf');
+  confEl.textContent = conf === 'haute' ? '✅ Confiance haute' : conf === 'moyenne' ? '⚠️ Confiance moyenne' : '❌ Confiance faible';
+  confEl.className = 'ocr-confidence ' + (conf === 'haute' ? 'high' : conf === 'moyenne' ? 'med' : 'low');
+
+  let fieldsHTML = '';
+  if (ocrMode === 'depense') {
+    fieldsHTML = `
+      <div class="ocr-field"><label>Date</label><input type="date" id="ocrf-date" value="${data.date||''}" class="${data.date?'ocr-filled':''}"></div>
+      <div class="ocr-field"><label>Fournisseur / Prestataire</label><input type="text" id="ocrf-fourn" value="${data.fournisseur||''}" class="${data.fournisseur?'ocr-filled':''}"></div>
+      <div class="ocr-field"><label>Montant TTC (€)</label><input type="number" id="ocrf-amt" value="${data.montant_ttc||''}" step="0.01" class="${data.montant_ttc?'ocr-filled':''}"></div>
+      <div class="ocr-field"><label>Description / Commentaire</label><input type="text" id="ocrf-desc" value="${data.description||''}" class="${data.description?'ocr-filled':''}"></div>
+      <div class="ocr-field"><label>Catégorie suggérée</label>
+        <select id="ocrf-cat"><option value="">— Catégorie —</option>${CATS.map(c=>`<option value="${c}"${c===data.categorie?' selected':''}>${c}</option>`).join('')}</select>
+      </div>
+      ${data.montant_ht ? `<div style="font-size:12px;color:var(--muted);padding:4px 0">HT : ${data.montant_ht} € · TVA : ${data.tva||'?'} €</div>` : ''}`;
+  } else if (ocrMode === 'loyer') {
+    fieldsHTML = `
+      <div class="ocr-field"><label>Période (mois)</label><input type="month" id="ocrf-periode" value="${data.periode||''}" class="${data.periode?'ocr-filled':''}"></div>
+      <div class="ocr-field"><label>Locataire</label><input type="text" id="ocrf-loc" value="${data.locataire||''}" class="${data.locataire?'ocr-filled':''}"></div>
+      <div class="ocr-field"><label>Appartement</label><input type="text" id="ocrf-appt" value="${data.appartement||''}"></div>
+      <div class="ocr-field"><label>Loyer HC (€)</label><input type="number" id="ocrf-loy" value="${data.loyer_hc||''}" step="0.01" class="${data.loyer_hc?'ocr-filled':''}"></div>
+      <div class="ocr-field"><label>Charges (€)</label><input type="number" id="ocrf-charges" value="${data.charges||''}" step="0.01"></div>
+      <div class="ocr-field"><label>Total (€)</label><input type="number" id="ocrf-total" value="${data.total||''}" step="0.01" class="${data.total?'ocr-filled':''}"></div>`;
+  } else if (ocrMode === 'emprunt') {
+    fieldsHTML = `
+      <div class="ocr-field"><label>Période (mois)</label><input type="month" id="ocrf-periode" value="${data.periode||''}" class="${data.periode?'ocr-filled':''}"></div>
+      <div class="ocr-field"><label>Banque</label><input type="text" id="ocrf-banque" value="${data.banque||''}"></div>
+      <div class="ocr-field"><label>Capital remboursé (€)</label><input type="number" id="ocrf-capital" value="${data.capital||''}" step="0.01" class="${data.capital?'ocr-filled':''}"></div>
+      <div class="ocr-field"><label>Intérêts (€)</label><input type="number" id="ocrf-interets" value="${data.interets||''}" step="0.01" class="${data.interets?'ocr-filled':''}"></div>
+      <div class="ocr-field"><label>Assurance emprunteur (€)</label><input type="number" id="ocrf-assurance" value="${data.assurance||''}" step="0.01" class="${data.assurance?'ocr-filled':''}"></div>
+      ${data.mensualite ? `<div class="ocr-field"><label>Mensualité totale (€)</label><input type="number" id="ocrf-mens" value="${data.mensualite}" step="0.01" class="ocr-filled" readonly style="color:var(--blue)"></div>` : ''}
+      ${data.solde ? `<div class="ocr-field"><label>Capital restant dû (€)</label><input type="number" value="${data.solde}" step="0.01" readonly style="color:var(--muted)"></div>` : ''}`;
+  } else {
+  }
+  fieldsDiv.innerHTML = fieldsHTML;
+  wrap.style.display = 'block';
+  document.getElementById('ocr-confirm-btn').style.display = 'inline-flex';
+}
+
+function confirmOCR() {
+  const pj = ocrFileData ? [ocrFileData] : [];
+  if (ocrMode === 'depense') {
+    const date = document.getElementById('ocrf-date')?.value || '';
+    const fourn = document.getElementById('ocrf-fourn')?.value || '';
+    const cat = document.getElementById('ocrf-cat')?.value || '';
+    const desc = document.getElementById('ocrf-desc')?.value || '';
+    const amt = document.getElementById('ocrf-amt')?.value || '';
+    addDepRow(ocrTargetTable, date, fourn, cat, desc, amt, pj);
+  } else if (ocrMode === 'loyer') {
+    const periode = document.getElementById('ocrf-periode')?.value || '';
+    const loc = document.getElementById('ocrf-loc')?.value || '';
+    const appt = document.getElementById('ocrf-appt')?.value || '';
+    const total = document.getElementById('ocrf-total')?.value || document.getElementById('ocrf-loy')?.value || '';
+    const charges = document.getElementById('ocrf-charges')?.value || '';
+    addLoyRow(periode, loc, appt, '', total, pj);
+    // Si charges → ajouter ligne provision
+    if (charges && parseFloat(charges) > 0) addPrvRow(periode, loc, appt, 'Provisions charges', charges, []);
+  } else if (ocrMode === 'emprunt') {
+    const periode = document.getElementById('ocrf-periode')?.value || '';
+    const capital = document.getElementById('ocrf-capital')?.value || '';
+    const interets = document.getElementById('ocrf-interets')?.value || '';
+    const assurance = document.getElementById('ocrf-assurance')?.value || '';
+    addEchRow(ocrTargetTable, periode, capital, interets, assurance);
+  } else {
+    const periode = document.getElementById('ocrf-periode')?.value || '';
+    const loc = document.getElementById('ocrf-loc')?.value || '';
+    const amt = document.getElementById('ocrf-amt')?.value || '';
+    const desc = document.getElementById('ocrf-desc')?.value || '';
+    addPrvRow(periode, loc, '', desc, amt, pj);
+  }
+  recalc();
+  saveData();
+  closeOCR();
+}
+
+// ══ TRAITEMENT EN LOT (BATCH) ══
+async function batchProcess(files, mode, tableId, batchId) {
+  if (!files || !files.length) return;
+  const fileArr = Array.from(files);
+
+  // Afficher la file d'attente
+  const queue = document.getElementById(batchId + '-queue');
+  const itemsEl = document.getElementById(batchId + '-items');
+  queue.style.display = 'block';
+  itemsEl.innerHTML = '';
+
+  // Créer les items de la file
+  const items = fileArr.map((file, i) => {
+    const icon = file.type.startsWith('image') ? '🖼️' : '📄';
+    const div = document.createElement('div');
+    div.className = 'batch-item';
+    div.id = `${batchId}-item-${i}`;
+    div.innerHTML = `
+      <span class="batch-item-icon">${icon}</span>
+      <span class="batch-item-name">${file.name}</span>
+      <span class="batch-progress" id="${batchId}-prog-${i}"></span>
+      <span class="batch-item-status wait" id="${batchId}-status-${i}">En attente</span>`;
+    itemsEl.appendChild(div);
+    return div;
+  });
+
+  // Traiter les fichiers séquentiellement
+  let doneCount = 0;
+  for (let i = 0; i < fileArr.length; i++) {
+    const file = fileArr[i];
+    const statusEl = document.getElementById(`${batchId}-status-${i}`);
+    const progEl = document.getElementById(`${batchId}-prog-${i}`);
+
+    // Passer en "en cours"
+    statusEl.className = 'batch-item-status running';
+    statusEl.textContent = 'OCR…';
+
+    try {
+      // Lire le fichier
+      const b64 = await new Promise(res => {
+        const r = new FileReader();
+        r.onload = e => res(e.target.result);
+        r.readAsDataURL(file);
+      });
+
+      let imageUrl = b64;
+      let text = '';
+
+      // PDF : essayer d'abord l'extraction texte directe (PDFs vectoriels)
+      if (file.type === 'application/pdf') {
+        statusEl.textContent = 'Extraction PDF…';
+        const pureB64 = b64.split(',')[1];
+        const binary = atob(pureB64);
+        const bytes = new Uint8Array(binary.length);
+        for (let j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
+        const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+        for (let p = 1; p <= pdf.numPages; p++) {
+          const page = await pdf.getPage(p);
+          const content = await page.getTextContent();
+          let lastY = null;
+          content.items.forEach(item => {
+            if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) text += '\n';
+            text += item.str + ' ';
+            lastY = item.transform[5];
+          });
+          text += '\n';
+        }
+        // Fallback Tesseract si pas de texte extractible
+        if (text.replace(/\s/g,'').length < 50) {
+          statusEl.textContent = 'OCR image…';
+          text = await runTesseract(b64, file.type, null);
+        }
+      } else {
+        // Image : Tesseract directement
+        text = await runTesseract(b64, file.type, statusEl);
+      }
+
+      // Parser et injecter la ligne
+      const parsed = parseOCRText(text, mode);
+
+      if (mode === 'depense') {
+        addDepRow(tableId, parsed.date||'', parsed.fournisseur||'', parsed.categorie||'', parsed.description||'', parsed.montant_ttc||'', [ocrFileData]);
+      } else if (mode === 'loyer') {
+        addLoyRow(parsed.periode||'', parsed.locataire||'', parsed.appartement||'', '', parsed.total||parsed.loyer_hc||'', [ocrFileData]);
+        if (parsed.charges && parseFloat(parsed.charges) > 0) {
+          addPrvRow(parsed.periode||'', parsed.locataire||'', '', 'Provisions charges', parsed.charges, []);
+        }
+      } else if (mode === 'emprunt') {
+        addEchRow(tableId, parsed.periode||'', parsed.capital||'', parsed.interets||'', parsed.assurance||'');
+      } else {
+        addPrvRow(parsed.periode||'', parsed.locataire||'', '', parsed.description||'', parsed.montant||'', [ocrFileData]);
+      }
+
+      recalc();
+      doneCount++;
+      statusEl.className = 'batch-item-status done';
+      statusEl.textContent = '✅ Ajouté';
+      progEl.textContent = '';
+
+    } catch(e) {
+      console.error('Batch OCR error:', e);
+      statusEl.className = 'batch-item-status err';
+      statusEl.textContent = '❌ ' + (e.message || 'Erreur inconnue');
+    }
+  }
+
+  // Résumé final
+  saveData();
+  const summary = document.createElement('div');
+  summary.style.cssText = 'font-size:12px;font-weight:600;color:var(--green);padding:8px 12px;margin-top:4px';
+  summary.textContent = `✅ ${doneCount}/${fileArr.length} document(s) traité(s) et ajouté(s)`;
+  itemsEl.appendChild(summary);
+
+  // Réinitialiser l'input file pour permettre un nouveau dépôt
+  const inp = document.getElementById(batchId + '-input');
+  if (inp) inp.value = '';
+}
+
+// ══ EMPRUNTS PAR BIEN ══
+function addEchRow(tbId, mois='', capital='', interets='', assurance='') {
+  const tb = document.getElementById(tbId);
+  const tr = document.createElement('tr');
+  tr.dataset.pj = '[]';
+  const tot = (parseFloat(capital)||0)+(parseFloat(interets)||0)+(parseFloat(assurance)||0);
+  tr.innerHTML = `
+    <td><input type="month" value="${mois}" style="width:120px" onchange="updateEchTot(this)"></td>
+    <td><input type="number" min="0" step="0.01" placeholder="0,00" value="${capital}" style="text-align:right;width:90px;color:var(--blue)" onchange="updateEchTot(this)"></td>
+    <td><input type="number" min="0" step="0.01" placeholder="0,00" value="${interets}" style="text-align:right;width:90px;color:var(--red)" onchange="updateEchTot(this)"></td>
+    <td><input type="number" min="0" step="0.01" placeholder="0,00" value="${assurance}" style="text-align:right;width:90px;color:var(--gold)" onchange="updateEchTot(this)"></td>
+    <td class="mono" style="font-weight:700">${tot>0?fmt(tot):'—'}</td>
+    <td><div class="pj-cell"><label class="pj-btn">📎 <input type="file" accept="image/*,.pdf" multiple style="display:none" onchange="addPJFiles(this)"> Joindre</label></div></td>
+    <td>${delBtn()}</td>`;
+  tb.appendChild(tr);
+}
+
+function updateEchTot(inp) {
+  const tr = inp.closest('tr');
+  const nums = tr.querySelectorAll('input[type="number"]');
+  const tot = Array.from(nums).reduce((s,i)=>s+(parseFloat(i.value)||0),0);
+  tr.cells[4].textContent = tot>0?fmt(tot):'—';
+  recalc();
+}
+
+// ── TABLEAU D'AMORTISSEMENT ──
+let amortViewV = 'annuel', amortViewF = 'annuel';
+
+function toggleAmort(bien) {
+  const w = document.getElementById(`${bien}-amort-wrap`);
+  w.style.display = w.style.display==='none' ? 'block' : 'none';
+  if (w.style.display==='block') calcAmort(bien);
+}
+
+function setAmortView(bien, view) {
+  if (bien==='v') amortViewV=view; else amortViewF=view;
+  const an = document.getElementById(`${bien}-btn-an`);
+  const men = document.getElementById(`${bien}-btn-men`);
+  an.style.background = view==='annuel'?'var(--blue)':'transparent';
+  an.style.color = view==='annuel'?'#fff':'var(--muted)';
+  an.style.borderColor = view==='annuel'?'var(--blue)':'var(--border)';
+  men.style.background = view==='mensuel'?'var(--blue)':'transparent';
+  men.style.color = view==='mensuel'?'#fff':'var(--muted)';
+  men.style.borderColor = view==='mensuel'?'var(--blue)':'var(--border)';
+  calcAmort(bien);
+}
+
+function calcAmort(bien) {
+  const capital = parseFloat(document.getElementById(`${bien}-emp-capital`)?.value)||0;
+  const tauxAn = parseFloat(document.getElementById(`${bien}-emp-taux`)?.value)||0;
+  const duree = parseInt(document.getElementById(`${bien}-emp-duree`)?.value)||0;
+  const mensHorsAss = parseFloat(document.getElementById(`${bien}-emp-mens`)?.value)||0;
+  const assurance = parseFloat(document.getElementById(`${bien}-emp-ass`)?.value)||0;
+  const tbody = document.getElementById(`${bien}-amort-tbody`);
+  const view = bien==='v' ? amortViewV : amortViewF;
+
+  if (!capital || !duree || (!tauxAn && !mensHorsAss)) {
+    tbody.innerHTML = `<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--muted)">Renseignez le capital, la durée et le taux (ou la mensualité) pour calculer le tableau.</td></tr>`;
+    return;
+  }
+
+  const tauxMens = tauxAn / 100 / 12;
+  // Mensualité calculée si pas saisie
+  let mens = mensHorsAss;
+  if (!mens && tauxMens > 0) {
+    mens = capital * tauxMens / (1 - Math.pow(1+tauxMens, -duree));
+  } else if (!mens) {
+    mens = capital / duree;
+  }
+
+  // Générer toutes les lignes mensuelles
+  let solde = capital;
+  const lignes = [];
+  for (let i=1; i<=duree && solde>0.01; i++) {
+    const int = tauxMens>0 ? solde*tauxMens : 0;
+    const cap = Math.min(mens-int, solde);
+    solde = Math.max(solde-cap, 0);
+    lignes.push({ mois:i, cap, int, ass:assurance, mens:cap+int+assurance, solde });
+  }
+
+  tbody.innerHTML = '';
+
+  if (view==='mensuel') {
+    lignes.forEach(l => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>Mois ${l.mois}</td><td class="mono">${fmt(l.cap)}</td><td class="mono-red">${fmt(l.int)}</td><td class="mono" style="color:var(--gold)">${fmt(l.ass)}</td><td class="mono" style="font-weight:600">${fmt(l.mens)}</td><td class="mono" style="color:var(--muted)">${fmt(l.solde)}</td>`;
+      tbody.appendChild(tr);
+    });
+  } else {
+    // Grouper par année
+    for (let an=1; an<=Math.ceil(duree/12); an++) {
+      const debut=(an-1)*12, fin=Math.min(an*12, lignes.length);
+      const slice=lignes.slice(debut,fin);
+      if (!slice.length) break;
+      const totCap=slice.reduce((s,l)=>s+l.cap,0);
+      const totInt=slice.reduce((s,l)=>s+l.int,0);
+      const totAss=slice.reduce((s,l)=>s+l.ass,0);
+      const totMens=slice.reduce((s,l)=>s+l.mens,0);
+      const soldeFin=slice[slice.length-1].solde;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td style="font-weight:600">Année ${an}</td><td class="mono">${fmt(totCap)}</td><td class="mono-red">${fmt(totInt)}</td><td class="mono" style="color:var(--gold)">${fmt(totAss)}</td><td class="mono" style="font-weight:600">${fmt(totMens)}</td><td class="mono" style="color:var(--muted)">${fmt(soldeFin)}</td>`;
+      tbody.appendChild(tr);
+    }
+  }
+}
+
+function calcAmortV() { const w=document.getElementById('v-amort-wrap'); if(w.style.display!=='none') calcAmort('v'); recalc(); }
+function calcAmortF() { const w=document.getElementById('f-amort-wrap'); if(w.style.display!=='none') calcAmort('f'); recalc(); }
+
+// ══ INIT ══
+
+function addEmprunt() {
+  const id = Date.now();
+  emprunts.push({ id, nom: '', bien: '', banque: '', capital_initial: '', taux: '', duree: '', mensualite: '', assurance_mens: '' });
+  renderEmprunts();
+}
+
+function removeEmprunt(id) {
+  emprunts = emprunts.filter(e => e.id !== id);
+  renderEmprunts();
+  recalc();
+  saveData();
+}
+
+function renderEmprunts() {
+  const el = document.getElementById('emprunts-list');
+  if (!emprunts.length) {
+    el.innerHTML = '<div class="empty" style="padding:32px"><div class="empty-icon">🏦</div><p>Aucun emprunt enregistré.</p></div>';
+    return;
+  }
+  el.innerHTML = emprunts.map(e => `
+    <div class="emprunt-grid">
+      <div class="emprunt-card">
+        <div class="emprunt-card-head">
+          <h4>🏦 ${e.nom || 'Emprunt'}</h4>
+          <button class="btn-del" onclick="removeEmprunt(${e.id})">✕</button>
+        </div>
+        <div class="emprunt-fields">
+          <div class="ef full"><label>Nom / Référence</label><input type="text" value="${e.nom||''}" placeholder="Ex: Crédit Vitry" onchange="emprunts.find(x=>x.id===${e.id}).nom=this.value;renderEmprunts();recalc();saveData()"></div>
+          <div class="ef"><label>Bien concerné</label>
+            <select onchange="emprunts.find(x=>x.id===${e.id}).bien=this.value;recalc();saveData()">
+              <option value="" ${!e.bien?'selected':''}>— Bien —</option>
+              <option value="Vitry sur Seine" ${e.bien==='Vitry sur Seine'?'selected':''}>Vitry sur Seine</option>
+              <option value="Ferrières en Brie" ${e.bien==='Ferrières en Brie'?'selected':''}>Ferrières en Brie</option>
+              <option value="Les deux" ${e.bien==='Les deux'?'selected':''}>Les deux</option>
+            </select>
+          </div>
+          <div class="ef"><label>Banque</label><input type="text" value="${e.banque||''}" placeholder="Nom banque" onchange="emprunts.find(x=>x.id===${e.id}).banque=this.value;saveData()"></div>
+          <div class="ef"><label>Capital initial (€)</label><input type="number" value="${e.capital_initial||''}" placeholder="0" onchange="emprunts.find(x=>x.id===${e.id}).capital_initial=this.value;recalc();saveData()"></div>
+          <div class="ef"><label>Taux annuel (%)</label><input type="number" value="${e.taux||''}" placeholder="0,00" step="0.01" onchange="emprunts.find(x=>x.id===${e.id}).taux=this.value;saveData()"></div>
+          <div class="ef"><label>Durée (mois restants)</label><input type="number" value="${e.duree||''}" placeholder="0" onchange="emprunts.find(x=>x.id===${e.id}).duree=this.value;recalc();saveData()"></div>
+          <div class="ef"><label>Mensualité hors assurance (€)</label><input type="number" value="${e.mensualite||''}" placeholder="0,00" step="0.01" onchange="emprunts.find(x=>x.id===${e.id}).mensualite=this.value;recalc();saveData()"></div>
+          <div class="ef"><label>Assurance mensuelle (€)</label><input type="number" value="${e.assurance_mens||''}" placeholder="0,00" step="0.01" onchange="emprunts.find(x=>x.id===${e.id}).assurance_mens=this.value;recalc();saveData()"></div>
+        </div>
+        <div class="emprunt-total">
+          <span>Mensualité totale</span>
+          <span>${fmt((parseFloat(e.mensualite)||0)+(parseFloat(e.assurance_mens)||0))}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function addEmpRow(mois='', bien='', banque='', capital='', interets='', assurance='') {
+  const tb = document.getElementById('emp-ech-tb');
+  const tr = document.createElement('tr');
+  tr.dataset.pj = '[]';
+  const total = (parseFloat(capital)||0) + (parseFloat(interets)||0) + (parseFloat(assurance)||0);
+  tr.innerHTML = `
+    <td><input type="month" value="${mois}" style="width:120px" onchange="updateEmpRow(this)"></td>
+    <td><select onchange="recalc()"><option value="">— Bien —</option><option value="Vitry"${bien==='Vitry'?' selected':''}>Vitry</option><option value="Ferrières"${bien==='Ferrières'?' selected':''}>Ferrières</option></select></td>
+    <td><input type="text" placeholder="Banque" value="${banque}"></td>
+    <td><input type="number" min="0" step="0.01" placeholder="0,00" value="${capital}" style="text-align:right;width:90px;color:var(--blue)" onchange="updateEmpRow(this)"></td>
+    <td><input type="number" min="0" step="0.01" placeholder="0,00" value="${interets}" style="text-align:right;width:90px;color:var(--red)" onchange="updateEmpRow(this)"></td>
+    <td><input type="number" min="0" step="0.01" placeholder="0,00" value="${assurance}" style="text-align:right;width:90px;color:var(--gold)" onchange="updateEmpRow(this)"></td>
+    <td class="mono" style="font-weight:700">${total > 0 ? fmt(total) : '—'}</td>
+    <td><div class="pj-cell"><label class="pj-btn">📎 <input type="file" accept="image/*,.pdf" multiple style="display:none" onchange="addPJFiles(this)"> Joindre</label></div></td>
+    <td>${delBtn()}</td>`;
+  tb.appendChild(tr);
+}
+
+function updateEmpRow(inp) {
+  const tr = inp.closest('tr');
+  const nums = tr.querySelectorAll('input[type="number"]');
+  const total = Array.from(nums).reduce((s,i)=>s+(parseFloat(i.value)||0),0);
+  tr.cells[6].textContent = total > 0 ? fmt(total) : '—';
+  recalc();
+}
+
+// ══ ANALYSE EN LANGAGE SIMPLE ══
+function renderAnalyse(totRec, totDep, totCF, vRec, fRec, vDep, fDep, gDep, empInt, empAss, empCap) {
+  const grid = document.getElementById('analyse-grid');
+  const conseil = document.getElementById('analyse-conseil');
+  if (totRec === 0 && totDep === 0) {
+    grid.innerHTML = '<div class="analyse-bloc"><div class="ab-icon">📭</div><div class="ab-title">Situation</div><div class="ab-text">Aucune donnée saisie pour le moment. Commencez à renseigner vos loyers et dépenses.</div></div>';
+    conseil.style.display = 'none';
+    return;
+  }
+
+  const blocs = [];
+
+  // Bloc revenus
+  if (totRec > 0) {
+    blocs.push(`<div class="analyse-bloc ok"><div class="ab-icon">💰</div><div class="ab-title">Vos revenus</div><div class="ab-text">Vous avez encaissé <strong>${fmt(totRec)}</strong> au total${vRec > 0 ? ` dont <strong>${fmt(vRec)}</strong> de loyers à Vitry` : ''}${fRec > 0 ? ` et <strong>${fmt(fRec)}</strong> via Airbnb à Ferrières` : ''}.</div></div>`);
+  }
+
+  // Bloc dépenses
+  if (totDep > 0) {
+    blocs.push(`<div class="analyse-bloc ${totDep > totRec ? 'bad' : 'warn'}"><div class="ab-icon">🧾</div><div class="ab-title">Vos dépenses</div><div class="ab-text">Vous avez dépensé <strong>${fmt(totDep)}</strong> au total en charges et frais divers${empCap > 0 ? `, dont <strong>${fmt(empCap)}</strong> de remboursement de capital d'emprunt` : ''}.</div></div>`);
+  }
+
+  // Bloc cash flow
+  const cfClass = totCF > 0 ? 'ok' : totCF === 0 ? '' : 'bad';
+  const cfEmoji = totCF > 0 ? '✅' : totCF === 0 ? '⚖️' : '⚠️';
+  let cfText = '';
+  if (totRec === 0) {
+    cfText = 'Aucune recette enregistrée.';
+  } else if (totCF > 0) {
+    cfText = `Après avoir payé toutes vos charges, il vous reste <strong>${fmt(totCF)}</strong>. C'est ce qu'on appelle votre <em>cash flow positif</em> — votre immobilier vous rapporte de l'argent.`;
+  } else if (totCF === 0) {
+    cfText = `Vos revenus couvrent exactement vos dépenses. Vous êtes à l'équilibre mais sans marge de sécurité.`;
+  } else {
+    cfText = `Vos dépenses dépassent vos revenus de <strong>${fmt(Math.abs(totCF))}</strong>. Chaque mois, vous <em>dépensez plus que vous ne gagnez</em> avec votre immobilier. Il faut y remédier.`;
+  }
+  blocs.push(`<div class="analyse-bloc ${cfClass}"><div class="ab-icon">${cfEmoji}</div><div class="ab-title">Ce qu'il vous reste</div><div class="ab-text">${cfText}</div></div>`);
+
+  // Bloc emprunts
+  if (empInt > 0 || empAss > 0) {
+    blocs.push(`<div class="analyse-bloc warn"><div class="ab-icon">🏦</div><div class="ab-title">Vos emprunts</div><div class="ab-text">Vous payez <strong>${fmt(empInt)}</strong> d'intérêts et <strong>${fmt(empAss)}</strong> d'assurance emprunteur. <em>Bonne nouvelle :</em> ces deux montants sont déductibles de vos impôts — votre comptable s'en occupera.</div></div>`);
+  }
+
+  // Bloc rendement
+  if (totRec > 0) {
+    const rdt = (totCF / totRec * 100).toFixed(1);
+    const rdtClass = parseFloat(rdt) > 10 ? 'ok' : parseFloat(rdt) > 0 ? 'warn' : 'bad';
+    blocs.push(`<div class="analyse-bloc ${rdtClass}"><div class="ab-icon">📊</div><div class="ab-title">Votre rendement</div><div class="ab-text">Sur 100 € encaissés, il vous en reste <strong>${rdt} €</strong> après toutes les charges. ${parseFloat(rdt) > 10 ? "C'est un très bon rendement !" : parseFloat(rdt) > 0 ? "C'est correct, mais il y a peut-être des optimisations possibles." : "C'est insuffisant — à analyser avec votre comptable."}</div></div>`);
+  }
+
+  grid.innerHTML = blocs.join('');
+
+  // Conseil personnalisé
+  let conseilText = '';
+  if (totCF < 0 && totRec > 0) {
+    conseilText = `<strong>⚠️ Point d'attention :</strong> Vos dépenses sont supérieures à vos revenus. Vérifiez si certaines charges peuvent être réduites, ou si les loyers peuvent être revus à la hausse lors du prochain renouvellement de bail.`;
+  } else if (empInt > 0 && totRec > 0) {
+    const deductible = empInt + empAss;
+    conseilText = `<strong>💡 Bon à savoir :</strong> En régime BIC réel, vous pouvez déduire <strong>${fmt(deductible)}</strong> (intérêts + assurance emprunteur) de vos revenus locatifs, ce qui réduit votre impôt. Pensez à transmettre ces justificatifs à votre comptable.`;
+  } else if (totCF > 0 && totRec > 0) {
+    conseilText = `<strong>✅ Situation saine :</strong> Votre immobilier génère un excédent. Pensez à mettre de côté une partie pour faire face aux grosses réparations imprévues (toiture, chaudière, etc.).`;
+  }
+
+  if (conseilText) {
+    conseil.innerHTML = conseilText;
+    conseil.style.display = 'block';
+  } else {
+    conseil.style.display = 'none';
+  }
+}
+
+// ══ INIT ══
+renderPC();
+loadData();
+recalc();
+
+// ══ EXPOSER TOUTES LES FONCTIONS onclick SUR window ══
+window.addDepRow = addDepRow;
+window.addLoyRow = addLoyRow;
+window.addPrvRow = addPrvRow;
+window.addLocRow = addLocRow;
+window.addEchRow = addEchRow;
+window.addEmprunt = addEmprunt;
+window.removeEmprunt = removeEmprunt;
+window.batchProcess = batchProcess;
+window.openOCR = openOCR;
+window.closeOCR = closeOCR;
+window.confirmOCR = confirmOCR;
+window.handleOCRFile = handleOCRFile;
+window.importAirbnb = importAirbnb;
+window.importPC = importPC;
+window.saveData = saveData;
+window.clearAll = clearAll;
+window.genEcritures = genEcritures;
+window.exportFEC = exportFEC;
+window.exportCSV = exportCSV;
+window.renderPC = renderPC;
+window.calcAmort = calcAmort;
+window.calcAmortV = calcAmortV;
+window.calcAmortF = calcAmortF;
+window.toggleAmort = toggleAmort;
+window.setAmortView = setAmortView;
+window.updateEchTot = updateEchTot;
+window.addLoyRow = addLoyRow;
+window.closePJ = closePJ;
+window.addPJFiles = addPJFiles;
+
+}); // fin DOMContentLoaded
+</script>
+</body>
+</html>
